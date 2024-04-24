@@ -78,9 +78,9 @@ func app(ctx context.Context, c *config.Config, l *zap.Logger) error {
 		l.Info("server shutting down...")
 	}()
 
-	// blocking
 	l.Info("server is running", zap.String("url", "http://"+net.JoinHostPort(c.Host, c.Port)))
 
+	// blocking
 	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

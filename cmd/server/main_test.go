@@ -14,7 +14,7 @@ import (
 func TestApp(t *testing.T) {
 	t.Parallel()
 
-	c := &config.ServerConfig{Host: "localhost", Port: "8080"}
+	c := &config.Config{ServerConfig: &config.ServerConfig{Host: "localhost", Port: "8080"}}
 	l, _ := logging.NewLogger(config.Development)
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)
@@ -44,4 +44,18 @@ func TestDecorators(t *testing.T) {
 	closers := decorators(r, addRoutes)
 
 	assert.NotNil(t, closers)
+}
+
+func TestHealthEndpoints(t *testing.T) {
+	t.Parallel()
+
+	r := chi.NewRouter()
+	healthEndpoints(r)
+
+	urls := [...]string{"/healthz", "/readyz", "/ping"}
+
+	for _, url := range urls {
+		assert.HTTPStatusCode(t, r.ServeHTTP, "GET",
+			url, nil, 200)
+	}
 }

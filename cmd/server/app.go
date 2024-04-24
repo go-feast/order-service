@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"service/config"
+	"sync"
 )
 
 func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
@@ -28,7 +29,12 @@ func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Kill, os.Interrupt)
 	defer stop()
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		<-ctx.Done()
 
 		if err := s.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -39,9 +45,13 @@ func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
 		l.Info("server shutdown")
 	}()
 
+	// blocking
 	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+
+	// wait for Shutdown function to finish its work
+	wg.Wait()
 
 	var err error
 	// safe close deps

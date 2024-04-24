@@ -27,6 +27,14 @@ tasks:
     cmds:
       - go test -gcflags=-l -covermode=atomic -race ./...
 
+  build:
+    deps:
+      - tidy
+      - test
+    desc: Build service
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
+
   default:
     cmds:
       - task: help

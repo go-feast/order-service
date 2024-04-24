@@ -12,50 +12,32 @@ env:
   GO_VERSION: "1.22.2"
 
 jobs:
-  install-task:
-    name: Install Task
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Setup go-task
-        uses: pnorton5432/setup-task@v1
-        with:
-          task-version: 3.29.1
-
-  install-go:
-    name: Install Go
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/setup-go@v5.0.0
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - run: go version
-
-
   lint:
-    name: Linting
-    needs:
-      - install-go
-      - install-task
+    name: lint
     runs-on: ubuntu-latest
-    permissions: read-all
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
       - name: lint
         uses: golangci/golangci-lint-action@v3
-      - run: task lint
 
   test:
-    name: Testing
-    needs:
-      - install-go
-      - install-task
+    name: test
+    needs: lint
     runs-on: ubuntu-latest
     steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Go cache
         uses: actions/cache@v3
@@ -66,5 +48,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-cache-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ env.GO_VERSION }}-cache
+
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+
       - name: Test
         run: task test

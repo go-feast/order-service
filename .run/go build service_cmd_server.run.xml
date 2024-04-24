@@ -1,0 +1,24 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build service/cmd/server" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="resty-service-template" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="SERVER_DBURL" value="localhost:5432" />
+      <env name="SERVER_AMMPQURL" value="localhost:1111" />
+      <env name="SERVER_HOST" value="localhost" />
+      <env name="SERVER_PORT" value="8080" />
+      <env name="CONSUMER_HOST" value="9080" />
+      <env name="CONSUMER_PORT" value="9080" />
+      <env name="SERVER_REDISURL" value="localhost:1111" />
+      <env name="SERVER_ENVIRONMENT" value="development"/>
+      <env name="SERVER_WRITETIMEOUT" value="10s"/>
+      <env name="SERVER_READTIMEOUT" value="5s"/>
+      <env name="SERVER_IDLETIMEOUT" value="5s"/>
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="service/cmd/server" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/server/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

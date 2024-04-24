@@ -1,0 +1,32 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  OK_COLOR: '\033[32;01m'
+  NO_COLOR: '\033[0m'
+
+tasks:
+  help:
+    desc: Show the list of commands
+    cmds:
+      - task --list-all
+
+  lint:
+    desc: Run linters
+    cmds:
+      - golangci-lint run -c .golangci.yml
+
+  tidy:
+    desc: Run go mod tidy
+    cmds:
+      - go mod tidy
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -gcflags=-l -covermode=atomic -race ./...
+
+  default:
+    cmds:
+      - task: help

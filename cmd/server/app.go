@@ -19,8 +19,12 @@ func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
 	// metrics
 	// deps: db conn, kafka/rabbit conn
 	// server
+	l.Info("initializing server")
+
 	s, r := server(c)
 	// routes
+	l.Info("initializing routes and middlewares")
+
 	closers := decorators(r,
 		addMiddleware,
 		addRoutes,
@@ -42,10 +46,12 @@ func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
 			return
 		}
 
-		l.Info("server shutdown")
+		l.Info("server shutting down...")
 	}()
 
 	// blocking
+	l.Info("server is running", zap.String("url", "http://"+net.JoinHostPort(c.Host, c.Port)))
+
 	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
@@ -53,7 +59,10 @@ func app(ctx context.Context, c *config.ServerConfig, l *zap.Logger) error {
 	// wait for Shutdown function to finish its work
 	wg.Wait()
 
+	l.Info("closing dependencies")
+
 	var err error
+
 	// safe close deps
 	for _, closer := range closers {
 		err = closer.Close()

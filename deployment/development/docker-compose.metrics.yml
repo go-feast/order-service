@@ -1,0 +1,32 @@
+version: '3.9'
+
+networks:
+  api:
+    driver: bridge
+
+services:
+
+  app:
+    environment:
+        SERVER_DB_URL: db
+        SERVER_RABBITMQ_URL: rabbit
+        SERVER_HOST: app
+        SERVER_PORT: 8080
+        SERVER_REDIS_URL: redis
+        SERVER_ENVIRONMENT: production
+        SERVER_WRITETIMEOUT: 10s
+        SERVER_READTIMEOUT: 5s
+        SERVER_IDLETIMEOUT: 5s
+    build:
+      dockerfile: Dockerfile
+      context: ../../.
+    ports:
+      - "8080:8080"
+     # - 8081:8081
+
+  prometheus:
+    image: prom/prometheus:v2.40.4
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml

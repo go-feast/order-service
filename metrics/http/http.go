@@ -4,6 +4,6 @@
 package http
 
 import (
-	_ "github.com/prometheus/client_golang/prometheus/promauto"
-	_ "github.com/prometheus/client_golang/prometheus/promhttp"
+	_ "github.com/prometheus/client_golang/prometheus/promauto" //nolint:revive
+	_ "github.com/prometheus/client_golang/prometheus/promhttp" //nolint:revive
 )

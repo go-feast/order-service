@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"io"
 	"log"
@@ -56,6 +57,7 @@ func app(ctx context.Context, c *config.Config, l *zap.Logger) error {
 
 	closers := decorators(r,
 		addMiddleware,
+		metricEndpoints,
 		addRoutes,
 	)
 	// graceful shutdown
@@ -147,6 +149,12 @@ func healthEndpoints(r chi.Router) []io.Closer { //nolint:unparam
 	r.Get("/healthz", mw.Healthz)
 	r.Get("/readyz", mw.Readyz)
 	r.Get("/ping", mw.Ping)
+
+	return nil
+}
+
+func metricEndpoints(r chi.Router) []io.Closer {
+	r.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 	return nil
 }

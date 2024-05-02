@@ -14,7 +14,7 @@ import (
 func TestApp(t *testing.T) {
 	t.Parallel()
 
-	c := &config.Config{ServerConfig: &config.ServerConfig{Host: "localhost", Port: "8080"}}
+	c := &config.Config{Server: &config.ServerConfig{Host: "localhost", Port: "8080"}, MetricServer: &config.MetricServerConfig{Port: "8081"}}
 	l, _ := logging.NewLogger(config.Development)
 	ctx, cancel := context.WithCancel(context.Background())
 	errCh := make(chan error)

@@ -34,10 +34,15 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
 
-  metrics-up:
+  metrics-up-build:
     desc: Docker compose up prometheus with our app
     cmds:
       - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics build
+      - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics up
+
+  metrics-up:
+    desc: Docker compose up prometheus with our app
+    cmds:
       - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics up
 
   metrics-down:

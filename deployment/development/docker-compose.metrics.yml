@@ -12,6 +12,8 @@ services:
         SERVER_RABBITMQ_URL: rabbit
         SERVER_HOST: app
         SERVER_PORT: 8080
+        SERVER_METRICS_HOST: app
+        SERVER_METRICS_PORT: 8081
         SERVER_REDIS_URL: redis
         SERVER_ENVIRONMENT: production
         SERVER_WRITETIMEOUT: 10s
@@ -21,10 +23,16 @@ services:
       dockerfile: Dockerfile
       context: ../../.
     ports:
-      - "8080:8080"
-     # - 8081:8081
+      - "8080:8080" # server port
+      - "8081:8081" # metric server port
+    healthcheck:
+      test: ["CMD", "curl", "http://$SERVER_HOST:$SERVER_PORT/healthz" ]
+      interval: 5s
+      retries: 10
 
   prometheus:
+    depends_on:
+      - app
     image: prom/prometheus:v2.40.4
     ports:
       - "9090:9090"

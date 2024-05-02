@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"service/config"
+	"service/http/metrics"
 	mw "service/http/middleware"
 	"service/logging"
 	"sync"
@@ -27,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 	// logger
-	logger, err := logging.NewLogger(c.Environment,
+	logger, err := logging.NewLogger(c.Server.Environment,
 		logging.WithOutputPaths("stdout"),
 		logging.WithErrorOutputPaths("stderr"),
 	)
@@ -51,7 +52,7 @@ func app(ctx context.Context, c *config.Config, l *zap.Logger) error {
 	// server
 	l.Info("initializing server")
 
-	s, r := server(c)
+	s, r := server(c.Server)
 	// routes
 	l.Info("initializing routes and middlewares")
 
@@ -80,7 +81,10 @@ func app(ctx context.Context, c *config.Config, l *zap.Logger) error {
 		l.Info("server shutting down...")
 	}()
 
-	l.Info("server is running", zap.String("url", "http://"+net.JoinHostPort(c.Host, c.Port)))
+	l.Info("server is running", zap.String("url", "http://"+net.JoinHostPort(c.Server.Host, c.Server.Port)))
+
+	metrics.NewMetricsServer("resty_service_template", c.MetricServer, l).
+		ListenAndServe(ctx)
 
 	// blocking
 	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -105,7 +109,7 @@ func app(ctx context.Context, c *config.Config, l *zap.Logger) error {
 	return err
 }
 
-func server(c *config.Config) (server *http.Server, r chi.Router) {
+func server(c *config.ServerConfig) (server *http.Server, r chi.Router) {
 	r = chi.NewRouter()
 
 	server = &http.Server{
@@ -141,6 +145,7 @@ func addMiddleware(r chi.Router) []io.Closer {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(metrics.MetricRequests)
 
 	return nil
 }

@@ -7,6 +7,8 @@
       <env name="SERVER_RABBITMQ_URL" value="localhost:1111" />
       <env name="SERVER_HOST" value="localhost" />
       <env name="SERVER_PORT" value="8080" />
+      <env name="SERVER_METRICS_HOST" value="localhost" />
+      <env name="SERVER_METRICS_PORT" value="8081" />
       <env name="CONSUMER_HOST" value="9080" />
       <env name="CONSUMER_PORT" value="9080" />
       <env name="SERVER_REDIS_URL" value="localhost:1111" />

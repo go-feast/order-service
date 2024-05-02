@@ -19,10 +19,11 @@ const (
 )
 
 type Config struct {
-	*DBConfig       `env:", prefix=SERVER_DB_"`
-	*RedisConfig    `env:", prefix=SERVER_REDIS_"`
-	*RabbitMQConfig `env:", prefix=SERVER_RABBITMQ_"`
-	*ServerConfig   `env:", prefix=SERVER_"`
+	DB           *DBConfig           `env:", prefix=SERVER_DB_"`
+	Redis        *RedisConfig        `env:", prefix=SERVER_REDIS_"`
+	Rabbit       *RabbitMQConfig     `env:", prefix=SERVER_RABBITMQ_"`
+	Server       *ServerConfig       `env:", prefix=SERVER_"`
+	MetricServer *MetricServerConfig `env:", prefix=SERVER_METRICS_"`
 }
 
 type ServerConfig struct { //nolint:govet
@@ -32,6 +33,14 @@ type ServerConfig struct { //nolint:govet
 	ReadTimeout  time.Duration `env:"READTIMEOUT,required"`
 	IdleTimeout  time.Duration `env:"IDLETIMEOUT,required"`
 	Environment  Environment   `env:"ENVIRONMENT,required"`
+}
+
+type MetricServerConfig struct { //nolint:govet
+	Port         string        `env:"PORT,required"`
+	Host         string        `env:"HOST,required"`
+	WriteTimeout time.Duration `env:"WRITETIMEOUT"`
+	ReadTimeout  time.Duration `env:"READTIMEOUT"`
+	IdleTimeout  time.Duration `env:"IDLETIMEOUT"`
 }
 
 type DBConfig struct { //nolint:govet

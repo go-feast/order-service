@@ -47,7 +47,7 @@ func Run(ctx context.Context, l *zap.Logger, servers ...*http.Server) (err error
 
 	l.Info("servers shut down")
 
-	return
+	return err
 }
 
 func NewServer(c config.ServerConfig) (*http.Server, chi.Router) {

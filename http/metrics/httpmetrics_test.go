@@ -13,7 +13,6 @@ import (
 )
 
 func TestRegisterServer(t *testing.T) {
-
 	metric := metrics.NewMetrics("example1")
 	createServer(metric)
 
@@ -34,7 +33,7 @@ func TestRegisterServer(t *testing.T) {
 
 func assertCounterMetricEqual(t *testing.T, metric *metrics.Metrics, expected float64) {
 	m := &io_prometheus_client.Metric{}
-	metric.RequestsHit.WithLabelValues("GET", "/").Write(m)
+	metric.RequestsHit.WithLabelValues("GET", "/").Write(m) //nolint:errcheck
 	assert.Equal(t, expected, *m.Counter.Value)
 }
 

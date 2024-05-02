@@ -61,7 +61,7 @@ func main() {
 
 	defer func() {
 		for _, closer := range forClose {
-			err := closer.Close()
+			err = closer.Close()
 			if err != nil {
 				logger.Error("failed to close:", zap.Error(err))
 			}
@@ -74,21 +74,19 @@ func main() {
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
+
 	if err = serv.Run(ctx, logger, mainServiceServer, metricServer); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("app", zap.Error(err))
 	}
 }
 
-func RegisterMainServiceRoutes(r chi.Router) []io.Closer {
+func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	// middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(httpmetrics.RecordRequestHit)
-
-	// routes
-	//forClose := make([]io.Closer, )
 
 	return nil
 }

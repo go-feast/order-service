@@ -7,21 +7,21 @@ import (
 	"testing"
 )
 
-const _test_string = "test"
+const testString = "test"
 
 func TestNewMetrics(t *testing.T) {
-	m := metrics.NewMetrics(_test_string)
+	m := metrics.NewMetrics(testString)
 
 	assert.NotNil(t, m.RequestsHit)
 	assert.NotNil(t, m.RequestProceedingDuration)
 
-	m2 := metrics.NewMetrics(_test_string)
+	m2 := metrics.NewMetrics(testString)
 
 	assert.NotSame(t, m, m2)
 }
 
 func TestMetrics_Collectors(t *testing.T) {
-	testString := _test_string
+	testString := testString
 	m := metrics.NewMetrics(testString)
 
 	v := reflect.ValueOf(metrics.Metrics{})

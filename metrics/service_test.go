@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewMetricsService(t *testing.T) {
-	m := metrics.NewMetrics(_test_string)
+	m := metrics.NewMetrics(testString)
 
 	ms1 := metrics.NewMetricsService(m, nil)
 	ms2 := metrics.NewMetricsService(m, nil)
@@ -27,12 +27,12 @@ func TestMetricService_Handler(t *testing.T) {
 
 func assertRequestsHitEqual(t *testing.T, metric *metrics.Metrics, expected float64) {
 	m := &io_prometheus_client.Metric{}
-	metric.RequestsHit.WithLabelValues("GET", "/").Write(m)
+	metric.RequestsHit.WithLabelValues("GET", "/").Write(m) //nolint:errcheck
 	assert.Equal(t, expected, *m.Counter.Value)
 }
 
 func TestMetricService_RecordRequestHit(t *testing.T) {
-	metric := metrics.NewMetrics(_test_string + "2")
+	metric := metrics.NewMetrics(testString + "2")
 
 	ms := metrics.NewMetricsService(metric, prometheus.NewRegistry())
 	assertRequestsHitEqual(t, metric, 0.0)

@@ -15,7 +15,7 @@ services:
         SERVER_METRICS_HOST: app
         SERVER_METRICS_PORT: 8081
         SERVER_REDIS_URL: redis
-        SERVER_ENVIRONMENT: production
+        ENVIRONMENT: production
         SERVER_WRITETIMEOUT: 10s
         SERVER_READTIMEOUT: 5s
         SERVER_IDLETIMEOUT: 5s

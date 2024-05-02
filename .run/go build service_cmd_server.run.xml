@@ -12,7 +12,7 @@
       <env name="CONSUMER_HOST" value="9080" />
       <env name="CONSUMER_PORT" value="9080" />
       <env name="SERVER_REDIS_URL" value="localhost:1111" />
-      <env name="SERVER_ENVIRONMENT" value="development"/>
+      <env name="ENVIRONMENT" value="development"/>
       <env name="SERVER_WRITETIMEOUT" value="10s"/>
       <env name="SERVER_READTIMEOUT" value="5s"/>
       <env name="SERVER_IDLETIMEOUT" value="5s"/>

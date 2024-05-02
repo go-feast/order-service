@@ -3,6 +3,7 @@ package config_test
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"reflect"
 	"service/config"
 	"strings"
 	"testing"
@@ -37,4 +38,21 @@ func TestEnvironment_String(t *testing.T) {
 func TestEnvironment_Production_and_Develop(t *testing.T) {
 	require.Equal(t, strings.ToLower(config.Production.String()), "production")
 	require.Equal(t, strings.ToLower(config.Development.String()), "development")
+}
+
+func TestMainServiceServerConfig(t *testing.T) {
+	testCases := []struct {
+		st any
+	}{
+		{&config.MainServiceServerConfig{}},
+		{&config.MetricServerConfig{}},
+	}
+
+	for _, testCase := range testCases {
+		tc := testCase
+		v := reflect.ValueOf(tc.st)
+
+		_, ok := v.Interface().(config.ServerConfig)
+		assert.True(t, ok)
+	}
 }

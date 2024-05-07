@@ -74,7 +74,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
-	if err = serv.Run(ctx, logger, mainServiceServer, metricServer); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	_, errCh := serv.Run(ctx, logger, mainServiceServer, metricServer)
+
+	if err = <-errCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error(serviceName+version, zap.Error(err))
 	}
 }
@@ -96,6 +98,8 @@ func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 //
 // [/ping] [/healthz] [/readyz] - for checking if service alive
 func RegisterMetricRoutes(r chi.Router) {
+	r.Use(middleware.Logger)
+
 	r.Get("/healthz", mw.Healthz)
 	r.Get("/readyz", mw.Readyz)
 	r.Get("/ping", mw.Ping)

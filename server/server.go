@@ -2,52 +2,76 @@ package server
 
 import (
 	"context"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"net/http"
 	"service/config"
 	"sync"
 )
 
 // Run function run all servers that we provide and handles graceful shutdown via context.
-func Run(ctx context.Context, l *zap.Logger, servers ...*http.Server) (err error) {
-	var wg sync.WaitGroup
+func Run(ctx context.Context, l *zap.Logger, servers ...*http.Server) (started chan struct{}, err chan error) {
+	started, err = make(chan struct{}), make(chan error)
 
-	wg.Add(len(servers))
-	addrs := make([]string, len(servers))
+	go func() {
+		errIn := make(chan error)
 
-	for _, server := range servers {
-		addrs = append(addrs, "http://"+server.Addr)
-	}
+		// collecting errors
+		go func() {
+			var ex error
+			for e := range errIn {
+				ex = errors.Join(ex, e)
+			}
 
-	for _, server := range servers {
-		go func(s *http.Server) {
-			defer wg.Done()
+			err <- ex
 
-			err = s.ListenAndServe()
-		}(server)
-	}
+			close(err)
+		}()
 
-	l.Info("running servers", zap.Strings("urls", addrs))
+		group, _ := errgroup.WithContext(ctx)
 
-	wg.Add(1)
-	// function for gracefully shutdown
-	go func(ctx context.Context, servers ...*http.Server) {
-		defer wg.Done()
-		<-ctx.Done()
+		var wg sync.WaitGroup
 
-		l.Info("shutting down servers")
+		wg.Add(len(servers))
 
 		for _, server := range servers {
-			err = server.Shutdown(ctx)
+			group.Go(func() error {
+				wg.Done()
+
+				err := server.ListenAndServe()
+				if err != nil {
+					errIn <- err
+				}
+
+				return err
+			})
 		}
-	}(ctx, servers...)
 
-	wg.Wait()
+		go func() {
+			<-ctx.Done()
 
-	l.Info("servers shut down")
+			l.Info("shutting down servers")
 
-	return err
+			for _, server := range servers {
+				errIn <- server.Shutdown(ctx)
+			}
+			errIn <- group.Wait()
+
+			close(errIn)
+
+			l.Info("servers shut down")
+		}()
+
+		wg.Wait()
+
+		l.Info("running servers", zap.Strings("urls", getAddrs(servers...)))
+
+		close(started)
+	}()
+
+	return started, err
 }
 
 func NewServer(c config.ServerConfig) (*http.Server, chi.Router) {
@@ -63,4 +87,13 @@ func NewServer(c config.ServerConfig) (*http.Server, chi.Router) {
 	}
 
 	return server, mux
+}
+
+func getAddrs(s ...*http.Server) []string {
+	addrs := make([]string, len(s))
+	for i, server := range s {
+		addrs[i] = "http://" + server.Addr
+	}
+
+	return addrs
 }

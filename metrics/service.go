@@ -7,25 +7,26 @@ import (
 	"time"
 )
 
-type MetricService struct {
+// MetricCollector responsible for collecting metrics via methods and expose a http.HandlerFunc.
+type MetricCollector struct {
 	m   *Metrics
 	reg *prometheus.Registry
 }
 
-func NewMetricsService(metrics *Metrics, reg *prometheus.Registry) *MetricService {
-	return &MetricService{m: metrics, reg: reg}
+func NewMetricCollector(metrics *Metrics, reg *prometheus.Registry) *MetricCollector {
+	return &MetricCollector{m: metrics, reg: reg}
 }
 
-func (ms *MetricService) Handler() http.HandlerFunc {
+func (ms *MetricCollector) Handler() http.HandlerFunc {
 	ms.reg.MustRegister(ms.m.Collectors()...)
 
 	return promhttp.HandlerFor(ms.reg, promhttp.HandlerOpts{Registry: ms.reg}).ServeHTTP
 }
 
-func (ms *MetricService) RequestProceedingDuration(_, _ string, _ time.Duration) {
-	panic("not implemented")
+func (ms *MetricCollector) RequestProceedingDuration(status, method, uri string, dur time.Duration) {
+	ms.m.RequestProceedingDuration.WithLabelValues(status, method, uri).Observe(dur.Seconds())
 }
 
-func (ms *MetricService) RecordRequestHit(method, uri string) {
+func (ms *MetricCollector) RecordRequestHit(method, uri string) {
 	ms.m.RequestsHit.WithLabelValues(method, uri).Inc()
 }

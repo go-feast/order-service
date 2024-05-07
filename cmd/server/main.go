@@ -6,7 +6,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"io"
 	"log"
@@ -46,9 +45,9 @@ func main() {
 
 	// metric server
 	metricServer, metricRouter := serv.NewServer(c.MetricServer)
+
 	httpmetrics.RegisterServer(
-		metricServer,
-		metrics.NewMetricsService(metrics.NewMetrics(serviceName+version), prometheus.NewRegistry()),
+		metrics.NewMetricCollector(metrics.NewMetrics(serviceName), prometheus.NewRegistry()),
 		logger,
 	)
 
@@ -76,7 +75,7 @@ func main() {
 	defer stop()
 
 	if err = serv.Run(ctx, logger, mainServiceServer, metricServer); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Error("app", zap.Error(err))
+		logger.Error(serviceName+version, zap.Error(err))
 	}
 }
 
@@ -101,5 +100,5 @@ func RegisterMetricRoutes(r chi.Router) {
 	r.Get("/readyz", mw.Readyz)
 	r.Get("/ping", mw.Ping)
 
-	r.Get("/metrics", promhttp.Handler().ServeHTTP)
+	r.Get("/metrics", httpmetrics.Handler())
 }

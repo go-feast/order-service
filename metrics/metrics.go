@@ -5,24 +5,29 @@ import (
 	"reflect"
 )
 
-// Metrics struct contains metrics fields
-// For operations(increasing, decreasing etc.) on them - responsible MetricService.
+// Metrics struct contains metrics fields,
+// MetricCollector responsible for operations(increasing, decreasing etc.).
 // Metrics should only contain prometheus types of metrics
 type Metrics struct {
 	// TODO: ask
-	RequestProceedingDuration *prometheus.CounterVec
+	// RequestProceedingDuration represents request duration.
+	// Portioned by (status, method, uri)
+	RequestProceedingDuration *prometheus.SummaryVec
 
 	// TODO: ask
-	// Should be used for getting number of request by rate()
+	// RequestsHit represents requests hits.
+	// Portioned by (method, uri)
 	RequestsHit *prometheus.CounterVec
 }
 
 func NewMetrics(serviceName string) *Metrics {
 	return &Metrics{
-		RequestProceedingDuration: prometheus.NewCounterVec(prometheus.CounterOpts{
+		RequestProceedingDuration: prometheus.NewSummaryVec(prometheus.SummaryOpts{
 			Namespace: serviceName,
-			Name:      "request_processing_duration",
+			Name:      "request_proceeding_duration",
 			Help:      "Metric represents duration of proceeding request in nanoseconds. Portioned by status, method, uri. ",
+			// TODO: ask
+			Objectives: map[float64]float64{},
 		}, []string{"status", "method", "uri"}),
 		RequestsHit: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: serviceName,

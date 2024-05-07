@@ -1,5 +1,7 @@
 package logging
 
+// TODO: ask (maybe change to zerolog)
+
 import (
 	"fmt"
 	"go.uber.org/zap"

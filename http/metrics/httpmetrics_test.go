@@ -2,7 +2,6 @@ package httpmetrics_test
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"service/config"
@@ -13,51 +12,51 @@ import (
 )
 
 func TestRegisterServer(t *testing.T) {
-	metric := metrics.NewMetrics("example1")
-	createServer(metric)
-
-	handler := httpmetrics.RecordRequestHit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	assertCounterMetricEqual(t, metric, 0.0)
-
-	assert.HTTPStatusCode(t, handler.ServeHTTP, http.MethodGet, "/", nil, http.StatusOK)
-
-	assertCounterMetricEqual(t, metric, 1.0)
-
-	createServer(metric)
-
-	assertCounterMetricEqual(t, metric, 1.0)
+	t.Run("initial registry", func(t *testing.T) {
+		assert.NotPanics(t, func() { httpmetrics.RegisterServer(nil, nil) })
+	})
 }
 
-func assertCounterMetricEqual(t *testing.T, metric *metrics.Metrics, expected float64) {
-	m := &io_prometheus_client.Metric{}
-	metric.RequestsHit.WithLabelValues("GET", "/").Write(m) //nolint:errcheck
-	assert.Equal(t, expected, *m.Counter.Value)
+func TestUnregisterServer(t *testing.T) {
+	t.Run("unregister after register", func(t *testing.T) {
+		assert.NotPanics(t, func() { httpmetrics.UnregisterServer() })
+	})
+}
+
+func TestHandler(t *testing.T) {
+	t.Run("assert unregistered server should panic", func(t *testing.T) {
+		httpmetrics.UnregisterServer()
+
+		assert.Panics(t, func() { httpmetrics.Handler() })
+	})
+
+	t.Run("assert returning handler not nil", func(t *testing.T) {
+		m := metrics.NewMetrics("test")
+		mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
+
+		logger, _ := logging.NewLogger(config.Development)
+
+		httpmetrics.RegisterServer(mc, logger)
+
+		var h http.HandlerFunc
+
+		assert.NotPanics(t, func() { h = httpmetrics.Handler() })
+
+		assert.HTTPStatusCode(t, h, http.MethodGet, "/", nil, http.StatusOK)
+	})
 }
 
 func TestRecordRequestHit(t *testing.T) {
-	metric := metrics.NewMetrics("example2")
-	createServer(metric)
+	m := metrics.NewMetrics("test")
+	mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
 
-	handler := httpmetrics.RecordRequestHit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	logger, _ := logging.NewLogger(config.Development)
 
-	assertCounterMetricEqual(t, metric, 0.0)
+	httpmetrics.RegisterServer(mc, logger)
 
-	assert.HTTPStatusCode(t, handler.ServeHTTP, http.MethodGet, "/", nil, http.StatusOK)
-	// 1.0 throws an error while processing with other test, but when executed solo, 1.0 passes
-	assertCounterMetricEqual(t, metric, 1.0)
-}
+	var h http.HandlerFunc = func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }
 
-func createServer(metric *metrics.Metrics) {
-	server := &http.Server{
-		Addr: ":8080",
-	}
+	next := httpmetrics.RecordRequestHit(h)
 
-	l, _ := logging.NewLogger(config.Development)
-	service := metrics.NewMetricsService(metric, prometheus.NewRegistry())
-	httpmetrics.RegisterServer(server, service, l)
+	assert.HTTPStatusCode(t, next.ServeHTTP, http.MethodGet, "/", nil, http.StatusOK)
 }

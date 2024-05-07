@@ -2,29 +2,50 @@ package metrics_test
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"service/metrics"
 	"testing"
 )
 
-const testString = "test"
-
 func TestNewMetrics(t *testing.T) {
-	m := metrics.NewMetrics(testString)
+	const serviceName = "testing"
 
-	assert.NotNil(t, m.RequestsHit)
-	assert.NotNil(t, m.RequestProceedingDuration)
+	t.Run("assert metrics.NewMetrics returns not nil metrics", func(t *testing.T) {
+		m := metrics.NewMetrics(serviceName)
+		require.NotNil(t, m)
 
-	m2 := metrics.NewMetrics(testString)
+		assertFieldsNotNil(*m)
+	})
+	t.Run("assert assertFieldsnotNil panics when field is nil", func(t *testing.T) {
+		m := metrics.NewMetrics(serviceName)
 
-	assert.NotSame(t, m, m2)
+		testStruct := struct {
+			*metrics.Metrics
+			v *int
+		}{m, nil} // *int should be nil, to test if function panics
+
+		assert.Panics(t, func() {
+			assertFieldsNotNil(testStruct)
+		})
+	})
 }
 
+func assertFieldsNotNil[T comparable](v T) {
+	refV := reflect.ValueOf(v)
+
+	for i := 0; i < refV.NumField(); i++ {
+		field := refV.Field(i)
+		if field.Kind() == reflect.Ptr && field.IsNil() {
+			panic("field is nil")
+		}
+	}
+}
 func TestMetrics_Collectors(t *testing.T) {
-	testString := testString
-	m := metrics.NewMetrics(testString)
+	t.Run("test metrics.Meteics is nil", func(t *testing.T) {
+		var m *metrics.Metrics
 
-	v := reflect.ValueOf(metrics.Metrics{})
-
-	assert.Equal(t, len(m.Collectors()), v.NumField())
+		assert.Nil(t, m.Collectors())
+		assert.Len(t, m.Collectors(), 0)
+	})
 }

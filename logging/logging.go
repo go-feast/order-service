@@ -20,10 +20,12 @@ func NewLogger(options ...OptionFunc) (*zap.Logger, error) {
 	switch config.MustGetEnvironment() {
 	case config.Production:
 		c = zap.NewProductionConfig()
+		// FIXME: refactor
 	case config.Local:
-		fallthrough
+		c = zap.NewDevelopmentConfig()
+		// FIXME: refactor
 	case config.Testing:
-		fallthrough
+		c = zap.NewDevelopmentConfig()
 	case config.Development:
 		c = zap.NewDevelopmentConfig()
 

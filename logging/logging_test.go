@@ -4,7 +4,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"reflect"
-	"service/config"
 	"service/logging"
 	"testing"
 )
@@ -18,8 +17,8 @@ func TestOutputPaths(t *testing.T) {
 }
 
 func TestNewLoggerDevNProdAreNotEqual(t *testing.T) {
-	dev, _ := logging.NewLogger(config.Development)
-	prod, _ := logging.NewLogger(config.Production)
+	dev, _ := logging.NewLogger()
+	prod, _ := logging.NewLogger()
 
 	assert.Equal(t, false, reflect.DeepEqual(dev, prod))
 }

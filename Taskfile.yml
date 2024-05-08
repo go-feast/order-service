@@ -25,7 +25,7 @@ tasks:
   test:
     desc: Run tests
     cmds:
-      - go test -gcflags=-l -covermode=atomic -race ./...
+      - ENVIRONMENT=testing go test -gcflags=-l -covermode=atomic -race ./...
 
   build:
     deps:

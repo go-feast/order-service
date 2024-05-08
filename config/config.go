@@ -7,17 +7,13 @@ import (
 	"time"
 )
 
-type Environment string
+func ParseConfig(v any) error {
+	if err := envconfig.Process(context.TODO(), v); err != nil {
+		return err
+	}
 
-func (e Environment) String() string { return string(e) }
-
-const (
-	// Production represents production environment
-	Production Environment = "production"
-
-	// Development represents developer environment
-	Development Environment = "development"
-)
+	return nil
+}
 
 type ServerConfig interface {
 	HostPort() string
@@ -100,12 +96,4 @@ type RabbitMQConfig struct { //nolint:govet
 }
 type RedisConfig struct { //nolint:govet
 	RedisURL string `env:"URL,required"`
-}
-
-func ParseEnvironment(v any) error {
-	if err := envconfig.Process(context.TODO(), v); err != nil {
-		return err
-	}
-
-	return nil
 }

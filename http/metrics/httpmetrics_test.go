@@ -4,7 +4,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"service/config"
 	httpmetrics "service/http/metrics"
 	"service/logging"
 	"service/metrics"
@@ -34,7 +33,7 @@ func TestHandler(t *testing.T) {
 		m := metrics.NewMetrics("test")
 		mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
 
-		logger, _ := logging.NewLogger(config.Development)
+		logger, _ := logging.NewLogger()
 
 		httpmetrics.RegisterServer(mc, logger)
 
@@ -50,7 +49,7 @@ func TestRecordRequestHit(t *testing.T) {
 	m := metrics.NewMetrics("test")
 	mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
 
-	logger, _ := logging.NewLogger(config.Development)
+	logger, _ := logging.NewLogger()
 
 	httpmetrics.RegisterServer(mc, logger)
 

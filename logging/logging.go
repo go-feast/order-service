@@ -3,7 +3,6 @@ package logging
 // TODO: ask (maybe change to zerolog)
 
 import (
-	"fmt"
 	"go.uber.org/zap"
 	"service/config"
 )
@@ -12,19 +11,23 @@ import (
 type OptionFunc func(*zap.Config)
 
 // NewLogger initializes the logger based on the provided environment and options.
-func NewLogger(env config.Environment, options ...OptionFunc) (*zap.Logger, error) {
+func NewLogger(options ...OptionFunc) (*zap.Logger, error) {
 	var (
 		err error
 		c   zap.Config
 	)
 
-	switch env {
+	switch config.MustGetEnvironment() {
 	case config.Production:
 		c = zap.NewProductionConfig()
+	case config.Local:
+		fallthrough
+	case config.Testing:
+		fallthrough
 	case config.Development:
 		c = zap.NewDevelopmentConfig()
+
 	default:
-		return nil, fmt.Errorf("invalid environment: %s", env)
 	}
 
 	for _, opt := range options {

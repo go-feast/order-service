@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"service/config"
 	"service/http/middleware"
 	"service/logging"
 	serv "service/server"
@@ -22,7 +21,7 @@ func TestRun(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		l, _ := logging.NewLogger(config.Development)
+		l, _ := logging.NewLogger()
 
 		started, err := serv.Run(ctx, l, s1, s2)
 

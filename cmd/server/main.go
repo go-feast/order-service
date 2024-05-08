@@ -28,12 +28,12 @@ const (
 func main() {
 	c := &config.Config{}
 	// config
-	err := config.ParseEnvironment(c)
+	err := config.ParseConfig(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// logger
-	logger, err := logging.NewLogger(c.Environment,
+	logger, err := logging.NewLogger(
 		logging.WithOutputPaths("stdout"),
 		logging.WithErrorOutputPaths("stderr"),
 	)

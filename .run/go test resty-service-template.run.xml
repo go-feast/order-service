@@ -3,6 +3,9 @@
     <module name="resty-service-template" />
     <working_directory value="$PROJECT_DIR$" />
     <go_parameters value="-gcflags=-l -covermode=atomic -race" />
+    <envs>
+      <env name="ENVIRONMENT" value="testing" />
+    </envs>
     <kind value="DIRECTORY" />
     <package value="service" />
     <directory value="$PROJECT_DIR$" />

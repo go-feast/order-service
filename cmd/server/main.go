@@ -35,7 +35,6 @@ func main() {
 	logger := logging.New(
 		logging.WithTimestamp(),
 		logging.WithServiceName(serviceName),
-		logging.WithCaller(),
 		logging.WithPID(),
 	)
 

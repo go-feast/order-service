@@ -67,9 +67,9 @@ func New(opts ...OptionFunc) *Logger {
 
 	switch config.MustGetEnvironment() {
 	case config.Production:
-		ctx = zerolog.New(out).With().Timestamp()
+		ctx = zerolog.New(out).With().Timestamp().Caller()
 	case config.Development, config.Local:
-		ctx = zerolog.New(zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339}).With().Timestamp()
+		ctx = zerolog.New(zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339}).With().Timestamp().Caller()
 	case config.Testing:
 		return NewNopLogger()
 	}
@@ -95,12 +95,6 @@ func WithTimestamp() OptionFunc {
 func WithServiceName(name string) OptionFunc {
 	return func(c zerolog.Context) zerolog.Context {
 		return c.Str("service.name", name)
-	}
-}
-
-func WithCaller() OptionFunc {
-	return func(c zerolog.Context) zerolog.Context {
-		return c.Caller()
 	}
 }
 

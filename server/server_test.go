@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"service/http/middleware"
-	"service/logging"
 	serv "service/server"
 	"testing"
 	"time"
@@ -21,9 +20,7 @@ func TestRun(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		l, _ := logging.NewLogger()
-
-		started, err := serv.Run(ctx, l, s1, s2)
+		started, err := serv.Run(ctx, s1, s2)
 
 		<-started
 
@@ -41,9 +38,9 @@ func TestRun(t *testing.T) {
 
 		cancel()
 
-		e := <-err
-
-		assert.ErrorIs(t, e, http.ErrServerClosed)
+		for e := range err {
+			assert.ErrorIs(t, e, http.ErrServerClosed)
+		}
 	})
 }
 

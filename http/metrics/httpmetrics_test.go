@@ -33,7 +33,7 @@ func TestHandler(t *testing.T) {
 		m := metrics.NewMetrics("test")
 		mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
 
-		logger, _ := logging.NewLogger()
+		logger := logging.New()
 
 		httpmetrics.RegisterServer(mc, logger)
 
@@ -49,7 +49,7 @@ func TestRecordRequestHit(t *testing.T) {
 	m := metrics.NewMetrics("test")
 	mc := metrics.NewMetricCollector(m, prometheus.NewRegistry())
 
-	logger, _ := logging.NewLogger()
+	logger := logging.New()
 
 	httpmetrics.RegisterServer(mc, logger)
 

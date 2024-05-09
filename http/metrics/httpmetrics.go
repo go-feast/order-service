@@ -14,9 +14,8 @@ package httpmetrics
 
 // TODO: If need - possible to make otlp refactoring.
 import (
-	_ "github.com/prometheus/client_golang/prometheus/promauto" //nolint:revive
-	"go.uber.org/zap"
 	"net/http"
+	"service/logging"
 	"service/metrics"
 )
 
@@ -24,14 +23,14 @@ import (
 // All functions and methods in package should relay on singleton instance of Server.
 type Server struct {
 	metricService *metrics.MetricCollector
-	l             *zap.Logger
+	l             *logging.Logger
 }
 
 var (
 	metricServer *Server
 )
 
-func RegisterServer(metricService *metrics.MetricCollector, l *zap.Logger) {
+func RegisterServer(metricService *metrics.MetricCollector, l *logging.Logger) {
 	metricServer = &Server{metricService: metricService, l: l}
 }
 

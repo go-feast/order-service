@@ -316,7 +316,7 @@ func TestMetricCollector_RequestProceedingDuration(t *testing.T) {
 		status       = "200"
 		method       = "GET"
 		path         = "/"
-		testDuration = time.Second
+		testDuration = time.Microsecond
 	)
 
 	t.Parallel()

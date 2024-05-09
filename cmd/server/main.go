@@ -6,7 +6,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 	"io"
 	"log"
 	"net/http"
@@ -33,15 +32,13 @@ func main() {
 		log.Fatal(err)
 	}
 	// logger
-	logger, err := logging.NewLogger(
-		logging.WithOutputPaths("stdout"),
-		logging.WithErrorOutputPaths("stderr"),
+	logger := logging.New(
+		logging.WithServiceName(serviceName+version),
+		logging.WithTimeStamp(),
+		logging.WithCaller(),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	logger.Info("config", zap.Any("config", c))
+	logger.Info().Any("config", c).Send()
 
 	// metric server
 	metricServer, metricRouter := serv.NewServer(c.MetricServer)
@@ -62,7 +59,7 @@ func main() {
 		for _, closer := range forClose {
 			err = closer.Close()
 			if err != nil {
-				logger.Error("failed to close:", zap.Error(err))
+				logger.Err(err).Msg("failed to close:")
 			}
 		}
 	}()
@@ -74,10 +71,12 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
-	_, errCh := serv.Run(ctx, logger, mainServiceServer, metricServer)
+	_, errCh := serv.Run(ctx, mainServiceServer, metricServer)
 
-	if err = <-errCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Error(serviceName+version, zap.Error(err))
+	for err = range errCh {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Err(err).Send()
+		}
 	}
 }
 

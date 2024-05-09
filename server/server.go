@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"net/http"
 	"service/config"
+	"service/logging"
 	"sync"
 )
 
 // Run function run all servers that we provide and handles graceful shutdown via context.
-func Run(ctx context.Context, l *zap.Logger, servers ...*http.Server) (started chan struct{}, err chan error) {
-	started, err = make(chan struct{}), make(chan error)
+func Run(ctx context.Context, servers ...*http.Server) (started chan struct{}, err chan error) {
+	started, err = make(chan struct{}), make(chan error, len(servers)<<1)
+
+	var l = logging.L()
 
 	go func() {
 		errIn := make(chan error)
@@ -52,21 +54,28 @@ func Run(ctx context.Context, l *zap.Logger, servers ...*http.Server) (started c
 		go func() {
 			<-ctx.Done()
 
-			l.Info("shutting down servers")
+			l.Info().Msg("shutting down servers")
 
 			for _, server := range servers {
-				errIn <- server.Shutdown(ctx)
+				err := server.Shutdown(ctx)
+				if err != nil {
+					errIn <- err
+				}
 			}
-			errIn <- group.Wait()
+
+			err := group.Wait()
+			if err != nil {
+				errIn <- err
+			}
 
 			close(errIn)
 
-			l.Info("servers shut down")
+			l.Info().Msg("servers shut down")
 		}()
 
 		wg.Wait()
 
-		l.Info("running servers", zap.Strings("urls", getAddrs(servers...)))
+		l.Info().Strs("urls", getAddrs(servers...)).Msg("running servers")
 
 		close(started)
 	}()

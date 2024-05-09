@@ -15,7 +15,7 @@ import (
 func Run(ctx context.Context, servers ...*http.Server) (started chan struct{}, err chan error) {
 	started, err = make(chan struct{}), make(chan error, len(servers)<<1)
 
-	var l = logging.L()
+	var l = logging.New()
 
 	go func() {
 		errIn := make(chan error)

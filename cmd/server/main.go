@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	version     = "v1.0"
+	// version     = "v1.0"
 	serviceName = "template"
 )
 
@@ -33,9 +33,10 @@ func main() {
 	}
 	// logger
 	logger := logging.New(
-		logging.WithServiceName(serviceName+version),
-		logging.WithTimeStamp(),
+		logging.WithTimestamp(),
+		logging.WithServiceName(serviceName),
 		logging.WithCaller(),
+		logging.WithPID(),
 	)
 
 	logger.Info().Any("config", c).Send()

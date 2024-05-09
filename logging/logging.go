@@ -4,21 +4,16 @@ package logging
 
 import (
 	"github.com/rs/zerolog"
+	"io"
 	"os"
 	"service/config"
-	"sync"
+	"time"
 )
 
 // Logger is a custom logger that logs messages using zerolog.Logger.
 type Logger struct {
 	logger *zerolog.Logger
 }
-
-var (
-	nop    = zerolog.Nop()
-	logger = &Logger{logger: &nop}
-	once   sync.Once
-)
 
 func (l *Logger) UpdateContext(update func(c zerolog.Context) zerolog.Context) {
 	l.logger.UpdateContext(update)
@@ -39,14 +34,32 @@ func (l *Logger) Println(v ...interface{})                     { l.logger.Printl
 
 type OptionFunc func(zerolog.Context) zerolog.Context
 
-// L returns a global logger, which can be set once via New function.
+// NewDefaultLogger returns a global logger, which can be set once via New function.
 // If New wasn't called at least once, zerolog.Nop will be returned
-func L() *Logger {
-	return logger
+func NewDefaultLogger(w io.Writer) *Logger {
+	logger := zerolog.New(w)
+
+	l := &Logger{logger: &logger}
+
+	return l
 }
+
+func NewNopLogger() *Logger {
+	logger := zerolog.Nop()
+
+	l := &Logger{logger: &logger}
+
+	return l
+}
+
+var logger *Logger
 
 // New initializes the logger. Sets the global logger once.
 func New(opts ...OptionFunc) *Logger {
+	if logger != nil {
+		return logger
+	}
+
 	var (
 		out = os.Stdout
 		ctx zerolog.Context
@@ -54,23 +67,29 @@ func New(opts ...OptionFunc) *Logger {
 
 	switch config.MustGetEnvironment() {
 	case config.Production:
-		ctx = zerolog.New(out).With()
+		ctx = zerolog.New(out).With().Timestamp()
 	case config.Development, config.Local:
-		ctx = zerolog.New(zerolog.ConsoleWriter{Out: out, NoColor: false}).With()
+		ctx = zerolog.New(zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339}).With().Timestamp()
 	case config.Testing:
-		return logger
+		return NewNopLogger()
 	}
+
+	log := ctx.Logger()
 
 	for _, opt := range opts {
-		opt(ctx)
+		log.UpdateContext(opt)
 	}
 
-	once.Do(func() {
-		log := ctx.Logger()
-		logger.logger = &log
-	})
+	logger = &Logger{logger: &log}
 
 	return logger
+}
+
+func WithTimestamp() OptionFunc {
+	return func(c zerolog.Context) zerolog.Context {
+		zerolog.TimestampFieldName = "ts"
+		return c.Timestamp()
+	}
 }
 
 func WithServiceName(name string) OptionFunc {
@@ -79,21 +98,14 @@ func WithServiceName(name string) OptionFunc {
 	}
 }
 
-func WithTimeStamp(format ...string) OptionFunc {
-	return func(c zerolog.Context) zerolog.Context {
-		zerolog.TimestampFieldName = "ts"
-
-		for _, s := range format {
-			zerolog.TimeFieldFormat = s
-			break
-		}
-
-		return c.Timestamp()
-	}
-}
-
 func WithCaller() OptionFunc {
 	return func(c zerolog.Context) zerolog.Context {
 		return c.Caller()
+	}
+}
+
+func WithPID() OptionFunc {
+	return func(c zerolog.Context) zerolog.Context {
+		return c.Int("pid", os.Getpid())
 	}
 }

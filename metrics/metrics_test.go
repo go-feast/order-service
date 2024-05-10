@@ -41,11 +41,3 @@ func assertFieldsNotNil[T comparable](v T) {
 		}
 	}
 }
-func TestMetrics_Collectors(t *testing.T) {
-	t.Run("test metrics.Meteics is nil", func(t *testing.T) {
-		var m *metrics.Metrics
-
-		assert.Nil(t, m.Collectors())
-		assert.Len(t, m.Collectors(), 0)
-	})
-}

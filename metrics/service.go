@@ -4,6 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"reflect"
 	"time"
 )
 
@@ -18,7 +19,7 @@ func NewMetricCollector(metrics *Metrics, reg *prometheus.Registry) *MetricColle
 }
 
 func (ms *MetricCollector) Handler() http.HandlerFunc {
-	ms.reg.MustRegister(ms.m.Collectors()...)
+	ms.reg.MustRegister(ms.Collectors()...)
 
 	return promhttp.HandlerFor(ms.reg, promhttp.HandlerOpts{Registry: ms.reg}).ServeHTTP
 }
@@ -29,4 +30,28 @@ func (ms *MetricCollector) RequestProceedingDuration(status, method, uri string,
 
 func (ms *MetricCollector) RecordRequestHit(method, uri string) {
 	ms.m.RequestsHit.WithLabelValues(method, uri).Inc()
+}
+
+func (ms *MetricCollector) Collectors() []prometheus.Collector {
+	if ms.m == nil {
+		return nil
+	}
+
+	v := reflect.ValueOf(*(ms.m))
+
+	// getting number of fields
+	n := v.NumField()
+
+	collectors := make([]prometheus.Collector, n)
+
+	for i := 0; i < n; i++ {
+		field := v.Field(i)
+
+		collector, ok := field.Interface().(prometheus.Collector)
+		if ok {
+			collectors[i] = collector
+		}
+	}
+
+	return collectors
 }

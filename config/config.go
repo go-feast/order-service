@@ -23,12 +23,17 @@ type ServerConfig interface {
 	ReadHeaderTimeoutDur() time.Duration
 }
 
+type OTEL struct {
+	TraceEndpoint string `env:"OTLP_TRACE_ENDPOINT"`
+}
+
 type Config struct {
 	DB           *DBConfig                `env:", prefix=SERVER_DB_"`
 	Redis        *RedisConfig             `env:", prefix=SERVER_REDIS_"`
 	Rabbit       *RabbitMQConfig          `env:", prefix=SERVER_RABBITMQ_"`
 	Server       *MainServiceServerConfig `env:", prefix=SERVER_"`
 	MetricServer *MetricServerConfig      `env:", prefix=SERVER_METRICS_"`
+	OTEL         *OTEL                    `env:", prefix=OTEL_EXPORTER_"`
 	Environment  Environment              `env:"ENVIRONMENT,required"`
 }
 

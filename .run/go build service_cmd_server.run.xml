@@ -3,18 +3,19 @@
     <module name="resty-service-template" />
     <working_directory value="$PROJECT_DIR$" />
     <envs>
+      <env name="ENVIRONMENT" value="local" />
       <env name="CONSUMER_HOST" value="9080" />
       <env name="CONSUMER_PORT" value="9080" />
-      <env name="ENVIRONMENT" value="local" />
-      <env name="SERVER_DB_URL" value="localhost:5432" />
       <env name="SERVER_HOST" value="localhost" />
-      <env name="SERVER_IDLETIMEOUT" value="5s" />
+      <env name="SERVER_PORT" value="8080" />
       <env name="SERVER_METRICS_HOST" value="localhost" />
       <env name="SERVER_METRICS_PORT" value="8081" />
-      <env name="SERVER_PORT" value="8080" />
-      <env name="SERVER_RABBITMQ_URL" value="localhost:1111" />
+      <env name="OTEL_EXPORTER_OTLP_TRACE_ENDPOINT" value="http://localhost:4318" />
+      <env name="SERVER_DB_URL" value="localhost:5432" />
+      <env name="SERVER_RABBITMQ_URL" value="http://localhost:1111" />
+      <env name="SERVER_REDIS_URL" value="http://localhost:1111" />
+      <env name="SERVER_IDLETIMEOUT" value="5s" />
       <env name="SERVER_READTIMEOUT" value="5s" />
-      <env name="SERVER_REDIS_URL" value="localhost:1111" />
       <env name="SERVER_WRITETIMEOUT" value="10s" />
     </envs>
     <kind value="PACKAGE" />

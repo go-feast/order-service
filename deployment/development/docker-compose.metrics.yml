@@ -5,17 +5,17 @@ networks:
     driver: bridge
 
 services:
-
   app:
     environment:
-        SERVER_DB_URL: db
-        SERVER_RABBITMQ_URL: rabbit
+        ENVIRONMENT: production
         SERVER_HOST: app
         SERVER_PORT: 8080
         SERVER_METRICS_HOST: app
         SERVER_METRICS_PORT: 8081
+        SERVER_DB_URL: db
         SERVER_REDIS_URL: redis
-        ENVIRONMENT: production
+        SERVER_RABBITMQ_URL: rabbit
+        OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
         SERVER_WRITETIMEOUT: 10s
         SERVER_READTIMEOUT: 5s
         SERVER_IDLETIMEOUT: 5s
@@ -38,3 +38,14 @@ services:
       - "9090:9090"
     volumes:
       - ./external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "16686:16686" # serve frontend
+      - "4318:4318" # accept OpenTelemetry Protocol (OTLP) over HTTP
+      - "4317:4317" # accept OpenTelemetry Protocol (OTLP) over gRPC
+    networks:
+      - api
+    depends_on:
+      - app

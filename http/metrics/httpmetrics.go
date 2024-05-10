@@ -14,6 +14,8 @@ package httpmetrics
 
 // TODO: If need - possible to make otlp refactoring.
 import (
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net/http"
 	"service/logging"
 	"service/metrics"
@@ -27,6 +29,7 @@ type Server struct {
 }
 
 var (
+	// TODO: make atomic.Value
 	metricServer *Server
 )
 
@@ -43,7 +46,21 @@ func Handler() http.HandlerFunc {
 		panic("metric Server not registered")
 	}
 
-	return metricServer.metricService.Handler()
+	tracer := otel.Tracer("metric tracer")
+	var h = metricServer.metricService.Handler()
+	return func(w http.ResponseWriter, r *http.Request) {
+		var (
+			ctx = r.Context()
+		)
+
+		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(r.Header))
+
+		ctx, span := tracer.Start(ctx, "metric handler") //nolint:ineffassign
+
+		defer span.End()
+
+		h(w, r)
+	}
 }
 
 func RecordRequestHit(next http.Handler) http.Handler {

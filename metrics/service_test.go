@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+func TestMetrics_Collectors(t *testing.T) {
+	t.Run("test metrics.Meteics is nil", func(t *testing.T) {
+		mc := metrics.NewMetricCollector(nil, nil)
+
+		assert.Nil(t, mc.Collectors())
+		assert.Len(t, mc.Collectors(), 0)
+	})
+}
+
 func TestMetricCollector(t *testing.T) {
 	t.Run("assert metrics.NewMetricCollector returns not nil", func(t *testing.T) {
 		collector := metrics.NewMetricCollector(nil, nil)

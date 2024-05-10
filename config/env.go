@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 )
 
@@ -35,6 +36,8 @@ func SetGetEnv(f func(string) string) {
 	getenv = f
 }
 
+var ErrPanicMsg = errors.New("invalid environment")
+
 // MustGetEnvironment returns environment variable by specified key via getenv function.
 func MustGetEnvironment() Environment {
 	const key = "ENVIRONMENT"
@@ -44,5 +47,5 @@ func MustGetEnvironment() Environment {
 		return env
 	}
 
-	panic("invalid environment")
+	panic(ErrPanicMsg)
 }

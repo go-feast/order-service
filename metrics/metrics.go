@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"reflect"
 )
 
 // Metrics struct contains metrics fields,
@@ -35,28 +34,4 @@ func NewMetrics(serviceName string) *Metrics {
 			Help:      "Metric represents hits for specified request. Portioned by method, uri. ",
 		}, []string{"method", "uri"}),
 	}
-}
-
-func (m *Metrics) Collectors() []prometheus.Collector {
-	if m == nil {
-		return nil
-	}
-
-	v := reflect.ValueOf(*m)
-
-	// getting number of fields
-	n := v.NumField()
-
-	collectors := make([]prometheus.Collector, n)
-
-	for i := 0; i < n; i++ {
-		field := v.Field(i)
-
-		collector, ok := field.Interface().(prometheus.Collector)
-		if ok {
-			collectors[i] = collector
-		}
-	}
-
-	return collectors
 }

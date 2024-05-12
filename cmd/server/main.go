@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"go.opentelemetry.io/otel"
+	"github.com/rs/zerolog"
 	"io"
 	"log"
 	"net/http"
@@ -34,11 +34,11 @@ func (f CloseFunc) Close() error {
 }
 
 type Closer struct {
-	logger   *logging.Logger
+	logger   *zerolog.Logger
 	forClose []io.Closer
 }
 
-func NewCloser(logger *logging.Logger, forClose ...io.Closer) *Closer {
+func NewCloser(logger *zerolog.Logger, forClose ...io.Closer) *Closer {
 	return &Closer{logger: logger, forClose: forClose}
 }
 
@@ -84,8 +84,6 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to register tracer provider")
 	}
 
-	tracer := otel.GetTracerProvider().Tracer(serviceName)
-
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
 
@@ -109,7 +107,6 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
 }
 
 func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam

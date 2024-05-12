@@ -5,20 +5,16 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/traceid"
-	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"service/config"
-	"service/http/metrics"
-	mw "service/http/middleware"
-	httptracing "service/http/tracing"
 	"service/logging"
-	"service/metrics"
 	serv "service/server"
+	"service/tracing"
 )
 
 const (
@@ -62,6 +58,10 @@ func (c *Closer) Close() {
 }
 
 func main() {
+	// graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
+	defer stop()
+
 	c := &config.Config{}
 	// config
 	err := config.ParseConfig(c)
@@ -80,20 +80,11 @@ func main() {
 	forClose := NewCloser(logger)
 	defer forClose.Close()
 
-	shutdown, err := httptracing.Provider(context.Background(), serviceName, c.OTEL.TraceEndpoint)
-	if err != nil {
-		logger.Panic().Err(err).Msg("trace provider error")
+	if err = tracing.RegisterTracerProvider(ctx, serviceName, c.OTEL.TraceEndpoint); err != nil {
+		logger.Fatal().Err(err).Msg("failed to register tracer provider")
 	}
 
-	forClose.Append(CloseFunc(func() error { return shutdown(context.Background()) }))
-
-	// metric server
-	metricServer, metricRouter := serv.NewServer(c.MetricServer)
-
-	httpmetrics.RegisterServer(
-		metrics.NewMetricCollector(metrics.NewMetrics(serviceName), prometheus.NewRegistry()),
-		logger,
-	)
+	tracer := otel.GetTracerProvider().Tracer(serviceName)
 
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
@@ -104,14 +95,7 @@ func main() {
 
 	forClose.Append(fc...)
 
-	// 		metrics
-	RegisterMetricRoutes(metricRouter)
-
-	// graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
-	defer stop()
-
-	_, errCh := serv.Run(ctx, mainServiceServer, metricServer)
+	_, errCh := serv.Run(ctx, mainServiceServer)
 
 	for err = range errCh {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -124,8 +108,6 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(httpmetrics.RecordRequestHit)
-	r.Use(traceid.Middleware)
 	r.Use(middleware.Recoverer)
 
 }
@@ -135,19 +117,4 @@ func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	Middlewares(r)
 
 	return nil
-}
-
-// RegisterMetricRoutes initialize routes for metrics. Example:
-//
-// [/metric] - for accessing metrics
-//
-// [/ping] [/healthz] [/readyz] - for checking if service alive
-func RegisterMetricRoutes(r chi.Router) {
-	r.Use(middleware.Logger)
-
-	r.Get("/healthz", mw.Healthz)
-	r.Get("/readyz", mw.Readyz)
-	r.Get("/ping", mw.Ping)
-
-	r.Get("/metrics", httpmetrics.Handler())
 }

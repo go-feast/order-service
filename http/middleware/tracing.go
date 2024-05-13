@@ -19,7 +19,6 @@ func ResolveTraceIDInHTTP(serviceName string) Middleware {
 
 			extractedCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(r.Header))
 			if reflect.DeepEqual(ctx, extractedCtx) {
-
 				attrs := []attribute.KeyValue{
 					semconv.URLFull(r.URL.String()),
 				}

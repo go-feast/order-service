@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"os/signal"
 	"service/config"
 	"service/logging"
+	"service/metrics"
 	serv "service/server"
 	"service/tracing"
 )
@@ -58,10 +60,6 @@ func (c *Closer) Close() {
 }
 
 func main() {
-	// graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
-	defer stop()
-
 	c := &config.Config{}
 	// config
 	err := config.ParseConfig(c)
@@ -80,20 +78,32 @@ func main() {
 	forClose := NewCloser(logger)
 	defer forClose.Close()
 
+	// graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
+	defer stop()
+
 	if err = tracing.RegisterTracerProvider(ctx, serviceName, c.OTEL.TraceEndpoint); err != nil {
-		logger.Fatal().Err(err).Msg("failed to register tracer provider")
+		logger.Err(err).Msg("failed to register tracer provider")
+		return
 	}
+
+	metrics.RegisterServiceName(serviceName)
 
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
+	// metric server
+
+	metricServer, metricRouter := serv.NewServer(c.MetricServer)
 
 	// register routes
 	//		main
 	fc := RegisterMainServiceRoutes(mainRouter)
 
 	forClose.Append(fc...)
+	//		metric
+	RegisterMetricRoute(metricRouter)
 
-	_, errCh := serv.Run(ctx, mainServiceServer)
+	_, errCh := serv.Run(ctx, mainServiceServer, metricServer)
 
 	for err = range errCh {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -114,4 +124,9 @@ func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	Middlewares(r)
 
 	return nil
+}
+
+func RegisterMetricRoute(r chi.Router) {
+	handler := promhttp.Handler()
+	r.Get("/metrics", handler.ServeHTTP)
 }

@@ -7,9 +7,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"service/config"
 )
 
 // RegisterTracerProvider registers global trace.TracerProvider
@@ -36,11 +35,11 @@ func RegisterTracerProvider(ctx context.Context, serviceName, endpoint string) e
 
 	// Register the trace exporter with a TracerProvider, using a batch
 	// span processor to aggregate spans before export.
-	bsp := trace.NewBatchSpanProcessor(traceExporter)
-	tracerProvider := trace.NewTracerProvider(
-		trace.WithSampler(SamplerFromEnv()),
-		trace.WithResource(res),
-		trace.WithSpanProcessor(bsp),
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(bsp),
 	)
 
 	otel.SetTracerProvider(tracerProvider)
@@ -55,19 +54,3 @@ func RegisterTracerProvider(ctx context.Context, serviceName, endpoint string) e
 
 	return nil
 }
-
-func SamplerFromEnv() trace.Sampler {
-	switch config.MustGetEnvironment() {
-	case config.Production:
-		// TODO: ask, change
-		return trace.AlwaysSample()
-	case config.Development, config.Local:
-		return trace.AlwaysSample()
-	case config.Testing:
-		return trace.NeverSample()
-	}
-
-	return nil
-}
-
-// some middlewares

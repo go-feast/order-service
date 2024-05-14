@@ -83,7 +83,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
-	if err = tracing.RegisterTracerProvider(ctx, serviceName, c.OTEL.TraceEndpoint); err != nil {
+	if err = tracing.RegisterTracerProvider(ctx, serviceName); err != nil {
 		logger.Err(err).Msg("failed to register tracer provider")
 		return
 	}

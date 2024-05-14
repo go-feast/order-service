@@ -10,9 +10,9 @@ import (
 	"reflect"
 )
 
-func ResolveTraceIDInHTTP(serviceName string) Middleware {
-	return func(next http.HandlerFunc) http.HandlerFunc {
-		fn := func(w http.ResponseWriter, r *http.Request) {
+func ResolveTraceIDInHTTP(serviceName string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var (
 				ctx = r.Context()
 			)
@@ -23,21 +23,25 @@ func ResolveTraceIDInHTTP(serviceName string) Middleware {
 					semconv.URLFull(r.URL.String()),
 				}
 
-				otel.GetTracerProvider().
-					Tracer(serviceName).Start(ctx, "http.middleware",
-					trace.WithNewRoot(),
-					trace.WithSpanKind(trace.SpanKindServer),
-					trace.WithAttributes(attrs...),
-				)
+				var span trace.Span
+
+				extractedCtx, span = otel.GetTracerProvider().
+					Tracer(serviceName).
+					Start(ctx, "http.middleware",
+						trace.WithNewRoot(),
+						trace.WithSpanKind(trace.SpanKindServer),
+						trace.WithAttributes(attrs...),
+					)
+				defer span.End()
 
 				otel.GetTextMapPropagator().
-					Inject(ctx, propagation.HeaderCarrier(r.Header))
+					Inject(extractedCtx, propagation.HeaderCarrier(r.Header))
 			}
 
 			r = r.WithContext(extractedCtx)
 
-			next(w, r)
-		}
+			next.ServeHTTP(w, r)
+		})
 
 		return fn
 	}

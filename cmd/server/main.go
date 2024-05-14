@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"service/config"
+	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
 	serv "service/server"
@@ -122,6 +123,8 @@ func Middlewares(r chi.Router) {
 func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	// middlewares
 	Middlewares(r)
+
+	r.Get("/healthz", mw.Healthz)
 
 	return nil
 }

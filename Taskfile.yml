@@ -5,6 +5,7 @@ version: '3'
 vars:
   OK_COLOR: '\033[32;01m'
   NO_COLOR: '\033[0m'
+  LOCAL_DOCKER_COMPOSE: docker-compose.local.yml
 
 tasks:
   help:
@@ -27,28 +28,26 @@ tasks:
     cmds:
       - ENVIRONMENT=testing go test -gcflags=-l -covermode=atomic -race ./...
 
-  build:
-    deps:
-      - tidy
+  build-api-server:
     desc: Build service
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
 
-  metrics-up-build:
+  local-build:
     desc: Docker compose up prometheus with our app
     cmds:
-      - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics build
-      - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics up
+      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics build
+      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
 
-  metrics-up:
+  local-up:
     desc: Docker compose up prometheus with our app
     cmds:
-      - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics up
+      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
 
-  metrics-down:
+  local-down:
     desc: Docker compose down prometheus with our app
     cmds:
-      - docker-compose -f ./deployment/development/docker-compose.metrics.yml -p metrics down
+      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics down
 
   default:
     cmds:

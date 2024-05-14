@@ -4,6 +4,12 @@ networks:
   api:
     driver: bridge
 
+x-app-volume:  &app-volume
+  type: bind
+  source: ./
+  target: /app
+
+
 services:
   app:
     environment:
@@ -20,13 +26,25 @@ services:
         SERVER_READTIMEOUT: 5s
         SERVER_IDLETIMEOUT: 5s
     build:
-      dockerfile: Dockerfile
-      context: ../../.
+      dockerfile: local.Dockerfile
+      context: ./
+      target: dev
+    restart: on-failure
+    volumes:
+      - *app-volume
+    command:
+      - "CompileDaemon"
+      - "-log-prefix=false"
+      - "-graceful-timeout=10"
+      - "-graceful-kill=true"
+      - "-exclude-dir=.git -exclude-dir=.run -exclude-dir=.github"
+      - "-build=/go/bin/task build-api-server"
+      - "-command=/app/bin/api-server"
     ports:
       - "8080:8080" # server port
       - "8081:8081" # metric server port
     healthcheck:
-      test: ["CMD", "curl", "http://$SERVER_HOST:$SERVER_PORT/healthz" ]
+      test: ["CMD", "curl", "app:8080/healthz" ]
       interval: 5s
       retries: 10
 
@@ -37,7 +55,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./deployment/development/external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
   jaeger:
     image: jaegertracing/all-in-one:1.52

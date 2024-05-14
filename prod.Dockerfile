@@ -14,9 +14,9 @@ RUN go mod download
 # Copy the rest of the application source code
 COPY . .
 
-RUN ./install-task.sh
+RUN go install github.com/go-task/task/v3/cmd/task@latest
 
-RUN ./task build
+RUN ./task build-api-server
 
 # Production Stage
 FROM alpine:latest

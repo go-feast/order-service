@@ -52,6 +52,8 @@ func New(opts ...OptionFunc) *zerolog.Logger {
 		log.UpdateContext(opt)
 	}
 
+	logger = &log
+
 	return logger
 }
 

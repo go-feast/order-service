@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"io"
 	"os"
 	"service/config"
 )
@@ -58,12 +57,10 @@ func RegisterTracerProvider(ctx context.Context, serviceName string) error {
 func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	switch config.MustGetEnvironment() {
 	case config.Testing:
-		return newStdOutExporter(os.Stdout)
+		return stdouttrace.New(stdouttrace.WithWriter(os.Stdout), stdouttrace.WithPrettyPrint())
 	case config.Development, config.Local, config.Production:
-		traceExporter, err := otlptracehttp.New(ctx,
-			// OTEL_EXPORTER_OTLP_TRACES_ENDPOINT MUST be set
-			otlptracehttp.WithInsecure(), // HTTPS -> HTTP
-		)
+		// OTEL_EXPORTER_OTLP_TRACES_ENDPOINT MUST be set
+		traceExporter, err := otlptracehttp.New(ctx, otlptracehttp.WithInsecure()) // HTTPS -> HTTP
 		if err != nil {
 			return nil, err
 		}
@@ -72,11 +69,4 @@ func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	}
 
 	return nil, fmt.Errorf("failed to create exporter")
-}
-
-func newStdOutExporter(w io.Writer) (sdktrace.SpanExporter, error) {
-	return stdouttrace.New(
-		stdouttrace.WithWriter(w),
-		stdouttrace.WithPrettyPrint(),
-	)
 }

@@ -16,11 +16,16 @@ func ResolveTraceIDInHTTP(serviceName string) func(http.Handler) http.Handler {
 			var (
 				ctx = r.Context()
 			)
+			// TODO: maybe wrap status code
+			wrapped := &wrappedResponseWriter{w: w}
 
 			extractedCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(r.Header))
 			if reflect.DeepEqual(ctx, extractedCtx) {
 				attrs := []attribute.KeyValue{
-					semconv.URLFull(r.URL.String()),
+					semconv.HTTPMethod(r.Method),
+					semconv.HTTPScheme(r.URL.Scheme),
+					semconv.HTTPUserAgent(r.UserAgent()),
+					semconv.URLPath(r.URL.String()),
 				}
 
 				var span trace.Span
@@ -40,7 +45,7 @@ func ResolveTraceIDInHTTP(serviceName string) func(http.Handler) http.Handler {
 
 			r = r.WithContext(extractedCtx)
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(wrapped, r)
 		})
 
 		return fn

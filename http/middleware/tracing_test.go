@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"service/config"
+	"service/logging"
 	serv "service/server"
 	"service/tracing"
 	"testing"
@@ -43,15 +44,19 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 			})
 
 		ctx, cancelFunc := context.WithCancel(ctx)
-		started, _ := serv.Run(ctx, server)
+		started, err := serv.Run(ctx, server)
 
 		<-started
 
-		resp, err := otelhttp.Get(ctx, "http://127.0.0.1:40000/")
-		require.NoError(t, err)
+		resp, e := otelhttp.Get(ctx, "http://127.0.0.1:40000/")
+		require.NoError(t, e)
 		defer resp.Body.Close() //nolint:errcheck
 
 		cancelFunc()
+
+		for e = range err {
+			logging.NewNopLogger().Err(e).Send()
+		}
 	})
 	t.Run("assert span generated into middleware", func(t *testing.T) {
 		ctx := context.Background()
@@ -71,14 +76,18 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 			})
 
 		ctx, cancelFunc := context.WithCancel(ctx)
-		started, _ := serv.Run(ctx, server)
+		started, err := serv.Run(ctx, server)
 
 		<-started
 
-		resp, err := http.Get("http://127.0.0.1:40000/")
-		require.NoError(t, err)
+		resp, e := http.Get("http://127.0.0.1:40000/")
+		require.NoError(t, e)
 		defer resp.Body.Close() //nolint:errcheck
 
 		cancelFunc()
+
+		for e = range err {
+			logging.NewNopLogger().Err(e).Send()
+		}
 	})
 }

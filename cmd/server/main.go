@@ -41,7 +41,7 @@ func main() {
 
 	logger.Info().Any("config", c).Send()
 
-	forClose := closer.NewCloser()
+	forClose := closer.NewCloser(logger)
 	defer forClose.Close()
 
 	// graceful shutdown

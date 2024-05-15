@@ -3,7 +3,6 @@ package closer
 import (
 	"github.com/rs/zerolog"
 	"io"
-	"service/logging"
 )
 
 type CloseFunc func() error
@@ -33,8 +32,8 @@ func (c *Closer) Close() {
 	c.logger.Info().Msg("all dependencies are closed")
 }
 
-func NewCloser(forClose ...io.Closer) *Closer {
-	return &Closer{logger: logging.New(), forClose: forClose}
+func NewCloser(l *zerolog.Logger, forClose ...io.Closer) *Closer {
+	return &Closer{logger: l, forClose: forClose}
 }
 
 func (c *Closer) AppendClosers(forClose ...io.Closer) {

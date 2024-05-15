@@ -56,7 +56,7 @@ func main() {
 
 	metrics.RegisterServiceName(serviceName)
 
-	Closer := closer.NewCloser()
+	Closer := closer.NewCloser(logger)
 	defer Closer.Close()
 
 	// metric server

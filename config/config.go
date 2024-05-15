@@ -27,14 +27,23 @@ type OTEL struct {
 	TraceEndpoint string `env:"OTLP_TRACE_ENDPOINT"`
 }
 
-type Config struct {
-	DB           *DBConfig                `env:", prefix=SERVER_DB_"`
-	Redis        *RedisConfig             `env:", prefix=SERVER_REDIS_"`
-	Rabbit       *RabbitMQConfig          `env:", prefix=SERVER_RABBITMQ_"`
+type ServiceConfig struct {
+	DB           *DBConfig                `env:", prefix=DB_"`
+	Redis        *RedisConfig             `env:", prefix=REDIS_"`
+	Kafka        *KafkaConfig             `env:", prefix=KAFKA_"`
 	Server       *MainServiceServerConfig `env:", prefix=SERVER_"`
-	MetricServer *MetricServerConfig      `env:", prefix=SERVER_METRICS_"`
+	MetricServer *MetricServerConfig      `env:", prefix=METRICS_"`
 	OTEL         *OTEL                    `env:", prefix=OTEL_EXPORTER_"`
 	Environment  Environment              `env:"ENVIRONMENT,required"`
+}
+
+type ConsumerConfig struct {
+	DB           *DBConfig           `env:", prefix=DB_"`
+	Redis        *RedisConfig        `env:", prefix=REDIS_"`
+	Kafka        *KafkaConfig        `env:", prefix=KAFKA_"`
+	MetricServer *MetricServerConfig `env:", prefix=METRICS_"`
+	OTEL         *OTEL               `env:", prefix=OTEL_EXPORTER_"`
+	Environment  Environment         `env:"ENVIRONMENT,required"`
 }
 
 type MainServiceServerConfig struct { //nolint:govet
@@ -96,8 +105,8 @@ func (m *MetricServerConfig) ReadHeaderTimeoutDur() time.Duration {
 type DBConfig struct { //nolint:govet
 	DBURL string `env:"URL,required"`
 }
-type RabbitMQConfig struct { //nolint:govet
-	RabbitMQURL string `env:"URL,required"`
+type KafkaConfig struct { //nolint:govet
+	KafkaURL string `env:"URL,required"`
 }
 type RedisConfig struct { //nolint:govet
 	RedisURL string `env:"URL,required"`

@@ -6,12 +6,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"service/closer"
 	"service/config"
 	mw "service/http/middleware"
 	"service/logging"
@@ -25,43 +25,8 @@ const (
 	serviceName = "template"
 )
 
-type CloseFunc func() error
-
-func (f CloseFunc) Close() error {
-	err := f()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-type Closer struct {
-	logger   *zerolog.Logger
-	forClose []io.Closer
-}
-
-func NewCloser(logger *zerolog.Logger, forClose ...io.Closer) *Closer {
-	return &Closer{logger: logger, forClose: forClose}
-}
-
-func (c *Closer) Append(forClose ...io.Closer) {
-	c.forClose = append(c.forClose, forClose...)
-}
-
-func (c *Closer) Close() {
-	for _, closer := range c.forClose {
-		err := closer.Close()
-		if err != nil {
-			c.logger.Err(err).Msg("failed to close:")
-		}
-	}
-
-	c.logger.Info().Msg("all dependencies are closed")
-}
-
 func main() {
-	c := &config.Config{}
+	c := &config.ServiceConfig{}
 	// config
 	err := config.ParseConfig(c)
 	if err != nil {
@@ -76,7 +41,7 @@ func main() {
 
 	logger.Info().Any("config", c).Send()
 
-	forClose := NewCloser(logger)
+	forClose := closer.NewCloser()
 	defer forClose.Close()
 
 	// graceful shutdown
@@ -100,7 +65,7 @@ func main() {
 	//		main
 	fc := RegisterMainServiceRoutes(mainRouter)
 
-	forClose.Append(fc...)
+	forClose.AppendClosers(fc...)
 	//		metric
 	RegisterMetricRoute(metricRouter)
 
@@ -116,7 +81,7 @@ func main() {
 func Middlewares(r chi.Router) {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
+	r.Use(middleware.RequestLogger(logging.NewLogEntry()))
 	r.Use(middleware.Recoverer)
 }
 

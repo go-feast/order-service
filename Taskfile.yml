@@ -33,6 +33,11 @@ tasks:
     cmds:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
 
+  build-api-consumer:
+    desc: Build service
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-consumer ./cmd/consumer/main.go
+
   local-build:
     desc: Docker compose up prometheus with our app
     cmds:

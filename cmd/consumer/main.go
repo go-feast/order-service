@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/Shopify/sarama"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"service/closer"
 	"service/config"
 	mw "service/http/middleware"
 	"service/logging"
@@ -22,7 +28,10 @@ const (
 )
 
 func main() {
-	c := &config.Config{}
+	c := &config.ConsumerConfig{}
+
+	saramaSubscriberConfig := kafka.DefaultSaramaSubscriberConfig()
+	saramaSubscriberConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	err := config.ParseConfig(c)
 	if err != nil {
@@ -47,10 +56,59 @@ func main() {
 
 	metrics.RegisterServiceName(serviceName)
 
+	Closer := closer.NewCloser()
+	defer Closer.Close()
+
 	// metric server
 	metricServer, metricRouter := serv.NewServer(c.MetricServer)
 
 	RegisterMetricRoute(metricRouter)
+
+	// consumer router
+	router, err := message.NewRouter(message.RouterConfig{}, logging.NewPubSubLogger())
+	if err != nil {
+		logger.Panic().Err(err).Msg("failed to create message router")
+	}
+
+	Closer.AppendClosers(router)
+
+	subscriber, err := kafka.NewSubscriber(
+		kafka.SubscriberConfig{
+			Brokers:               []string{c.Kafka.KafkaURL},
+			Unmarshaler:           kafka.DefaultMarshaler{},
+			OverwriteSaramaConfig: saramaSubscriberConfig,
+			ConsumerGroup:         "test_consumer_group",
+		},
+		watermill.NewStdLogger(false, false),
+	)
+	if err != nil {
+		logger.Panic().Err(err).Msg("failed to create kafka subscriber")
+	}
+
+	publisher, err := kafka.NewPublisher(
+		kafka.PublisherConfig{
+			Brokers:   []string{c.Kafka.KafkaURL},
+			Marshaler: kafka.DefaultMarshaler{},
+		},
+		watermill.NewStdLogger(false, false),
+	)
+	if err != nil {
+		logger.Panic().Err(err).Msg("failed to create kafka publisher")
+	}
+
+	closers := RegisterConsumerHandlers(router, subscriber, publisher)
+
+	Closer.AppendClosers(closers...)
+
+	go func() {
+		e := router.Run(ctx)
+		if e != nil {
+			logger.Error().Err(err).Msg("failed to run consumer")
+			return
+		}
+
+		logger.Info().Msg("exiting consumer")
+	}()
 
 	_, errCh := serv.Run(ctx, metricServer)
 
@@ -65,4 +123,11 @@ func RegisterMetricRoute(r chi.Router) {
 	handler := promhttp.Handler()
 	r.Get("/metrics", handler.ServeHTTP)
 	r.Get("/healthz", mw.Healthz)
+}
+
+func RegisterConsumerHandlers(_ *message.Router, subscriber message.Subscriber, publisher message.Publisher) []io.Closer {
+	return []io.Closer{
+		subscriber,
+		publisher,
+	}
 }

@@ -3,8 +3,10 @@ package logging
 // TODO: ask (maybe change to zerolog)
 
 import (
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"io"
+	"net/http"
 	"os"
 	"service/config"
 	"time"
@@ -73,5 +75,33 @@ func WithServiceName(name string) OptionFunc {
 func WithPID() OptionFunc {
 	return func(c zerolog.Context) zerolog.Context {
 		return c.Int("pid", os.Getpid())
+	}
+}
+
+type logEntry struct {
+	l *zerolog.Logger
+}
+
+func (l *logEntry) NewLogEntry(_ *http.Request) middleware.LogEntry {
+	return l
+}
+
+func (l *logEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+	l.l.Info().
+		Int("status", status).
+		Int("bytes", bytes).
+		Any("header", header).
+		Dur("elapsed", elapsed).
+		Any("extra", extra).
+		Send()
+}
+
+func (l *logEntry) Panic(v interface{}, _ []byte) {
+	l.l.Panic().Any("value", v).Stack().Send()
+}
+
+func NewLogEntry() middleware.LogFormatter {
+	return &logEntry{
+		l: logger,
 	}
 }

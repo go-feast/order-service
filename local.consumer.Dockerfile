@@ -10,7 +10,7 @@ FROM builder AS dev
 # Set the working directory inside the container
 WORKDIR /app
 #metrics port
-EXPOSE 8081
+EXPOSE 8082
 
 RUN go install github.com/go-task/task/v3/cmd/task@latest && \
     go install github.com/githubnemo/CompileDaemon@latest

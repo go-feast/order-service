@@ -106,7 +106,7 @@ type DBConfig struct { //nolint:govet
 	DBURL string `env:"URL,required"`
 }
 type KafkaConfig struct { //nolint:govet
-	KafkaURL string `env:"URL,required"`
+	KafkaURL []string `env:"URL,required"`
 }
 type RedisConfig struct { //nolint:govet
 	RedisURL string `env:"URL,required"`

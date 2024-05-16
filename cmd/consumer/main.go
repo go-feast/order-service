@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/Shopify/sarama"
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
@@ -64,8 +63,9 @@ func main() {
 
 	RegisterMetricRoute(metricRouter)
 
+	pubSubLogger := logging.NewPubSubLogger()
 	// consumer router
-	router, err := message.NewRouter(message.RouterConfig{}, logging.NewPubSubLogger())
+	router, err := message.NewRouter(message.RouterConfig{}, pubSubLogger)
 	if err != nil {
 		logger.Panic().Err(err).Msg("failed to create message router")
 	}
@@ -74,12 +74,12 @@ func main() {
 
 	subscriber, err := kafka.NewSubscriber(
 		kafka.SubscriberConfig{
-			Brokers:               []string{c.Kafka.KafkaURL},
+			Brokers:               c.Kafka.KafkaURL,
 			Unmarshaler:           kafka.DefaultMarshaler{},
 			OverwriteSaramaConfig: saramaSubscriberConfig,
 			ConsumerGroup:         "test_consumer_group",
 		},
-		watermill.NewStdLogger(false, false),
+		pubSubLogger,
 	)
 	if err != nil {
 		logger.Panic().Err(err).Msg("failed to create kafka subscriber")
@@ -87,10 +87,10 @@ func main() {
 
 	publisher, err := kafka.NewPublisher(
 		kafka.PublisherConfig{
-			Brokers:   []string{c.Kafka.KafkaURL},
+			Brokers:   c.Kafka.KafkaURL,
 			Marshaler: kafka.DefaultMarshaler{},
 		},
-		watermill.NewStdLogger(false, false),
+		pubSubLogger,
 	)
 	if err != nil {
 		logger.Panic().Err(err).Msg("failed to create kafka publisher")

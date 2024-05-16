@@ -17,7 +17,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	err := tracing.RegisterTracerProvider(context.Background(), "test")
+	err := tracing.RegisterTracerProvider(context.Background(), resource.Default())
 	if err != nil {
 		log.Fatal(err)
 	}

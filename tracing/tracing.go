@@ -9,24 +9,12 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"os"
 	"service/config"
 )
 
 // RegisterTracerProvider registers global trace.TracerProvider
-func RegisterTracerProvider(ctx context.Context, serviceName string) error {
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceName(serviceName),
-		),
-		resource.WithProcess(),
-		resource.WithOS(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource: %w", err)
-	}
-
+func RegisterTracerProvider(ctx context.Context, res *resource.Resource) error {
 	exporter, err := newExporter(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create trace exporter: %w", err)

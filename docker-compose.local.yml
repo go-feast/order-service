@@ -1,0 +1,120 @@
+version: '3.9'
+
+networks:
+  api:
+    driver: bridge
+
+x-service-volume:  &service-volume
+  type: bind
+  source: ./
+  target: /app
+
+
+services:
+
+  service-consumer:
+    environment:
+      ENVIRONMENT: production
+      METRICS_HOST: service-consumer
+      METRICS_PORT: 8082
+      DB_URL: db
+      REDIS_URL: redis
+      KAFKA_URL: kafka:9092
+      OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
+    build:
+      dockerfile: local.consumer.Dockerfile
+      context: ./
+      target: dev
+    restart: on-failure
+    volumes:
+      - *service-volume
+    command:
+      - "CompileDaemon"
+      - "-log-prefix=false"
+      - "-graceful-timeout=10"
+      - "-graceful-kill=true"
+      - "-exclude-dir=.git -exclude-dir=.run -exclude-dir=.github"
+      - "-build=/go/bin/task build-api-consumer"
+      - "-command=/app/bin/api-consumer"
+    ports:
+      - "8082:8082" # metric server port
+
+  service:
+    environment:
+        ENVIRONMENT: production
+        SERVER_HOST: service
+        SERVER_PORT: 8080
+        METRICS_HOST: service
+        METRICS_PORT: 8081
+        DB_URL: db # to change
+        REDIS_URL: redis # to change
+        KAFKA_URL: kafka:9092
+        OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
+        SERVER_WRITETIMEOUT: 10s
+        SERVER_READTIMEOUT: 5s
+        SERVER_IDLETIMEOUT: 5s
+    build:
+      dockerfile: local.service.Dockerfile
+      context: ./
+      target: dev
+    restart: on-failure
+    volumes:
+      - *service-volume
+    command:
+      - "CompileDaemon"
+      - "-log-prefix=false"
+      - "-graceful-timeout=10"
+      - "-graceful-kill=true"
+      - "-exclude-dir=.git -exclude-dir=.run -exclude-dir=.github"
+      - "-build=/go/bin/task build-api-server"
+      - "-command=/app/bin/api-server"
+    ports:
+      - "8080:8080" # server port
+      - "8081:8081" # metric server port
+    healthcheck:
+      test: ["CMD", "curl", "service:8080/healthz" ]
+      interval: 5s
+      retries: 10
+
+  prometheus:
+    depends_on:
+      - service
+    image: prom/prometheus:v2.40.4
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployment/development/external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    environment:
+        COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - "16686:16686" # serve frontend
+      - "4318:4318" # accept OpenTelemetry Protocol (OTLP) over HTTP
+      - "4317:4317" # accept OpenTelemetry Protocol (OTLP) over gRPC
+    networks:
+      - api
+    depends_on:
+      - service
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.1
+    restart: unless-stopped
+    logging:
+      driver: none
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.1
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    logging:
+      driver: none
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"

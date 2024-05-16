@@ -1,0 +1,20 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build service/cmd/consumer" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="resty-service-template" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="DB_URL" value="localhost:5432" />
+      <env name="ENVIRONMENT" value="local" />
+      <env name="KAFKA_URL" value="http://localhost:1111" />
+      <env name="METRICS_HOST" value="localhost" />
+      <env name="METRICS_PORT" value="8081" />
+      <env name="OTEL_EXPORTER_OTLP_TRACE_ENDPOINT" value="http://localhost:4318" />
+      <env name="REDIS_URL" value="http://localhost:1111" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="service/cmd/consumer" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/server/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

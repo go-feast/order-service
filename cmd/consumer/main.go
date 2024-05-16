@@ -8,6 +8,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"io"
 	"log"
 	"net/http"
@@ -23,6 +25,7 @@ import (
 )
 
 const (
+	version     = "v1.0"
 	serviceName = "template-consumer"
 )
 
@@ -48,7 +51,20 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
-	if err = tracing.RegisterTracerProvider(ctx, serviceName); err != nil {
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(version),
+		),
+		resource.WithProcess(),
+		resource.WithOS(),
+	)
+	if err != nil {
+		logger.Err(err).Msg("filed to create resource")
+		return
+	}
+
+	if err = tracing.RegisterTracerProvider(ctx, res); err != nil {
 		logger.Err(err).Msg("failed to register tracer provider")
 		return
 	}

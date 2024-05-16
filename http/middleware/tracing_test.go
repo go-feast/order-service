@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"log"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	err := tracing.RegisterTracerProvider(context.Background(), "test")
+	err := tracing.RegisterTracerProvider(context.Background(), resource.Default())
 	if err != nil {
 		log.Fatal(err)
 	}

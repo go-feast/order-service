@@ -24,7 +24,7 @@ import (
 
 const (
 	version     = "v1.0"
-	serviceName = "template"
+	serviceName = "order"
 )
 
 func main() {

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"service/api/handlers/order"
 	"service/closer"
 	"service/config"
 	mw "service/http/middleware"
@@ -103,8 +104,19 @@ func Middlewares(r chi.Router) {
 func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	// middlewares
 	Middlewares(r)
-
 	r.Get("/healthz", mw.Healthz)
+
+	handler := order.NewHandler()
+
+	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
+		Route("/order", func(r chi.Router) {
+			r.Post("/", handler.TakeOrder)
+			r.Route("/{id}", func(r chi.Router) {
+				// maybe should post an event on cooked order
+				// sets finished to an order
+				r.Post("/finished", nil)
+			})
+		})
 
 	return nil
 }

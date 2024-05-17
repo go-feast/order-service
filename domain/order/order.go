@@ -1,7 +1,7 @@
+// Package order contains our business logic.
 package order
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"time"
 )
@@ -36,20 +36,89 @@ type Order struct { //nolint:govet
 	// Meals contain meals` id that user have selected in a specific restaurant.
 	Meals []MealID
 
-	// Destination contains geo position of where Order should be delivered
+	// Destination contains geo position of where Order should be delivered.
 	Destination Destination
 
 	// CreatedAt represents where Order has been created.
 	CreatedAt time.Time
 
-	// Paid represents if order is paid
+	// CashPayment represents if order will be paid in cash or card.
+	CashPayment bool
+
+	// Paid represents if payment successful.
 	Paid bool
 
-	// Finished represents if order is finished
+	// TransactionID represents payment transaction id.
+	TransactionID *ID
+
+	// Finished represents if order is finished.
 	Finished bool
 
 	// Represents a timestamp when order was cooked in restaurant.
-	FinishedAt *time.Time
+	// By default - zeroed.
+	FinishedAt time.Time
+}
+
+// IsFinished return true and time if orders when Finished set to true and FinishedAt not zero.
+// Otherwise, returning false and zeroed time.
+func (o *Order) IsFinished() (bool, time.Time) {
+	if o.Finished && !o.FinishedAt.IsZero() {
+		return true, o.FinishedAt
+	}
+
+	return false, time.Time{}
+}
+
+// Create assign order an id and initialize a CreatedAt field.
+func (o *Order) Create() {
+	o.CreatedAt = time.Now()
+	o.ID = ID(uuid.NewString())
+}
+
+// NewOrder creates an order. But to set ID and CreatedAt call Create method.
+func NewOrder(
+	restaurantID, userID, transactionID string,
+	mealsIDs []string,
+	cashPayment bool,
+	latitude, longitude float64,
+) (*Order, error) {
+	rid, err := NewID(restaurantID)
+	if err != nil {
+		return nil, ErrInvalidRestaurantID
+	}
+
+	uid, err := NewID(userID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+
+	meals, err := MealsID(mealsIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		tid *ID
+		id  ID
+	)
+
+	if !cashPayment {
+		id, err = NewID(transactionID)
+		if err != nil {
+			return nil, ErrInvalidTransactionID
+		}
+
+		tid = &id
+	}
+
+	return &Order{
+		RestaurantID:  rid,
+		UserID:        uid,
+		Meals:         meals,
+		CashPayment:   cashPayment,
+		Destination:   Destination{Latitude: latitude, Longitude: longitude},
+		TransactionID: tid,
+	}, nil
 }
 
 // NewID parses provided id string and returning
@@ -62,20 +131,9 @@ func NewID(id string) (ID, error) {
 	return ID(id), nil
 }
 
-type MealIDError struct {
-	Err   error
-	Index int
-}
-
-func (m MealIDError) Error() string {
-	return fmt.Errorf("invalid id(index-%d): %w", m.Index, m.Err).Error()
-}
-
-func NewMealIDError(err error, index int) error {
-	return &MealIDError{Err: err, Index: index}
-}
-
-func Meals(ids []string) ([]MealID, []error) {
+// MealsID convert provided ids in slice of MealID.
+// If one error occurred while converting - an error returned.
+func MealsID(ids []string) ([]MealID, error) {
 	var (
 		errs    = make([]error, 0, len(ids))
 		mealIDs = make([]MealID, len(ids))
@@ -92,7 +150,7 @@ func Meals(ids []string) ([]MealID, []error) {
 	}
 
 	if len(errs) != 0 {
-		return nil, errs
+		return nil, &MealsIDError{Errs: errs}
 	}
 
 	return mealIDs, nil

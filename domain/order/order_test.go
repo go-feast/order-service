@@ -52,7 +52,7 @@ func TestNewID(t *testing.T) {
 	}
 }
 
-func TestMeals(t *testing.T) {
+func TestMealsID(t *testing.T) {
 	var (
 		validID1   = "8339957e-dd83-4754-bff4-3ec08de40ed9"
 		validID2   = "3150bb27-d728-42bd-9676-b567bf6053d9"
@@ -106,7 +106,7 @@ func TestMeals(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mealIDs, errs := Meals(tt.ids)
+			mealIDs, errs := MealsID(tt.ids)
 
 			if tt.errCount == 0 {
 				assert.Nil(t, errs)

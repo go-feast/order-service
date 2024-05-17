@@ -12,6 +12,10 @@ type Handler struct {
 	// repositories eg.
 }
 
-func TakeOrder(_ http.ResponseWriter, _ *http.Request) {
+func NewHandler() *Handler {
+	return &Handler{}
+}
+
+func (h *Handler) TakeOrder(_ http.ResponseWriter, _ *http.Request) {
 
 }

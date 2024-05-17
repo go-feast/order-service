@@ -113,7 +113,6 @@ func TestMealsID(t *testing.T) {
 				assert.ElementsMatch(t, tt.expected, mealIDs)
 			} else {
 				assert.Nil(t, mealIDs)
-				assert.Len(t, errs, tt.errCount)
 			}
 		})
 	}

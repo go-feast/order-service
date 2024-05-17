@@ -11,7 +11,7 @@ type (
 	ID string
 
 	// MealID should only stay for restaurant meals` id.
-	MealID string
+	MealID ID
 
 	// Destination represents position coordinates.
 	Destination struct {
@@ -27,11 +27,11 @@ type Order struct { //nolint:govet
 	// ID states for Order id.
 	ID ID
 
-	// RID states for Restaurant id.
-	RID string
+	// RestaurantID states for Restaurant id.
+	RestaurantID ID
 
-	// UID states for User id.
-	UID string
+	// UserID states for User id.
+	UserID ID
 
 	// Meals contain meals` id that user have selected in a specific restaurant.
 	Meals []MealID
@@ -76,23 +76,23 @@ func NewMealIDError(err error, index int) error {
 }
 
 func Meals(ids []string) ([]MealID, []error) {
-	errs := make([]error, len(ids))
+	var (
+		errs    = make([]error, 0, len(ids))
+		mealIDs = make([]MealID, len(ids))
+	)
 
 	for i, id := range ids {
-		_, err := uuid.Parse(id)
-		if err != nil {
-			errs[i] = NewMealIDError(err, i)
+		newID, err := NewID(id)
+		switch err {
+		case nil:
+			mealIDs[i] = MealID(newID)
+		default:
+			errs = append(errs, NewMealIDError(err, i))
 		}
 	}
 
 	if len(errs) != 0 {
 		return nil, errs
-	}
-
-	mealIDs := make([]MealID, len(ids))
-
-	for i, id := range ids {
-		mealIDs[i] = MealID(id)
 	}
 
 	return mealIDs, nil

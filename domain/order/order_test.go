@@ -53,7 +53,6 @@ func TestNewID(t *testing.T) {
 }
 
 func TestMeals(t *testing.T) {
-
 	var (
 		validID1   = "8339957e-dd83-4754-bff4-3ec08de40ed9"
 		validID2   = "3150bb27-d728-42bd-9676-b567bf6053d9"

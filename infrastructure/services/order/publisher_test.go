@@ -83,6 +83,7 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 
 		go func() {
 			defer wg.Done()
+
 			for {
 				select {
 				case <-ctx.Done():
@@ -99,7 +100,6 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 				case <-ctx.Done():
 					return
 				default:
-
 				}
 			}
 		}()

@@ -11,6 +11,7 @@ import (
 	"service/domain/order"
 	"sync"
 	"testing"
+	"time"
 )
 
 // TODO: integration testing with kafka
@@ -18,12 +19,10 @@ import (
 func TestPublisherService_PublishOrderCreated(t *testing.T) {
 	t.Run("assert publisher creates order", func(t *testing.T) {
 		var (
-			logger = watermill.NopLogger{}
+			logger  = watermill.NopLogger{}
+			ch      = gochannel.NewGoChannel(gochannel.Config{}, logger)
+			service = NewPublisherService(ch)
 		)
-
-		ch := gochannel.NewGoChannel(gochannel.Config{}, logger)
-
-		service := NewPublisherService(ch)
 
 		o, err := order.NewOrder(
 			gofakeit.UUID(),
@@ -42,7 +41,8 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 
 		o.Create()
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
 
 		messages, err := ch.Subscribe(ctx, topics.OrderCreated.String())
 
@@ -55,11 +55,13 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			msg := <-messages
+			msg, sent := <-messages
+
+			if !sent {
+				return
+			}
 
 			msg.Ack()
-
-			cancel()
 
 			var p PostOrder
 
@@ -75,10 +77,35 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 			assert.Equal(t, o.Destination.Longitude, p.Destination.Long)
 		}()
 
-		err = service.PublishOrderCreated(o)
+		var counter uint
 
-		assert.NoError(t, err)
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				err = service.PublishOrderCreated(o)
+				assert.NoError(t, err)
+
+				counter++
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
+
+				}
+			}
+		}()
 
 		wg.Wait()
+
+		t.Logf("messages sent within 1 second: %d", counter)
 	})
 }

@@ -10,6 +10,8 @@ var (
 	ErrInvalidRestaurantID  = errors.New("invalid restaurant id")
 	ErrInvalidUserID        = errors.New("invalid user id")
 	ErrInvalidTransactionID = errors.New("invalid transaction id")
+	ErrInvalidLatitude      = errors.New("invalid latitude: must be between -90 and 90")
+	ErrInvalidLongitude     = errors.New("invalid longitude: must be between -180 and 180")
 )
 
 type MealIDError struct {
@@ -17,14 +19,19 @@ type MealIDError struct {
 	Index int
 }
 
-type MealsIDError struct {
-	Errs []error `json:"errs"`
+type MultipleErrors struct {
+	Prefix string  `json:",omitempty"`
+	Errs   []error `json:"errs"`
 }
 
-func (m *MealsIDError) Error() string {
+func NewMultipleErrors(prefix string, errs []error) *MultipleErrors {
+	return &MultipleErrors{Prefix: prefix, Errs: errs}
+}
+
+func (m *MultipleErrors) Error() string {
 	var sb strings.Builder
 
-	sb.WriteString("meals ID errors: [")
+	sb.WriteString(fmt.Sprintf("%s: [", m.Prefix))
 
 	for i, err := range m.Errs {
 		if i > 0 {

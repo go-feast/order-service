@@ -95,19 +95,21 @@ func NewOrder(
 	cashPayment bool,
 	latitude, longitude float64,
 ) (*Order, error) {
+	errs := make([]error, 0)
+
 	rid, err := NewID(restaurantID)
 	if err != nil {
-		return nil, ErrInvalidRestaurantID
+		errs = append(errs, ErrInvalidRestaurantID)
 	}
 
 	uid, err := NewID(userID)
 	if err != nil {
-		return nil, ErrInvalidUserID
+		errs = append(errs, ErrInvalidUserID)
 	}
 
 	meals, err := MealsID(mealsIDs)
 	if err != nil {
-		return nil, err
+		errs = append(errs, err)
 	}
 
 	var (
@@ -118,10 +120,19 @@ func NewOrder(
 	if !cashPayment {
 		id, err = NewID(transactionID)
 		if err != nil {
-			return nil, ErrInvalidTransactionID
+			errs = append(errs, ErrInvalidTransactionID)
 		}
 
 		tid = &id
+	}
+
+	destination, err := NewDestination(latitude, longitude)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) != 0 {
+		return nil, NewMultipleErrors("failed order validation", errs)
 	}
 
 	return &Order{
@@ -129,7 +140,7 @@ func NewOrder(
 		CustomerID:    uid,
 		Meals:         meals,
 		CashPayment:   cashPayment,
-		Destination:   Destination{Latitude: latitude, Longitude: longitude},
+		Destination:   destination,
 		TransactionID: tid,
 	}, nil
 }
@@ -142,6 +153,21 @@ func NewID(id string) (ID, error) {
 	}
 
 	return ID(id), nil
+}
+
+func NewDestination(lat, long float64) (Destination, error) {
+	if lat >= -90 && lat <= 90 {
+		return Destination{}, ErrInvalidLatitude
+	}
+
+	if long >= -180 && long <= 180 {
+		return Destination{}, ErrInvalidLongitude
+	}
+
+	return Destination{
+		Latitude:  lat,
+		Longitude: long,
+	}, nil
 }
 
 // MealsID convert provided ids in slice of MealID.
@@ -163,7 +189,7 @@ func MealsID(ids []string) ([]ID, error) {
 	}
 
 	if len(errs) != 0 {
-		return nil, &MealsIDError{Errs: errs}
+		return nil, NewMultipleErrors("meals id error", errs)
 	}
 
 	return mealIDs, nil

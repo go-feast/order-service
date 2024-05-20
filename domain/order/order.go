@@ -7,11 +7,7 @@ import (
 )
 
 type (
-	// ID should be used for Order`s id.
 	ID string
-
-	// MealID should only stay for restaurant meals` id.
-	MealID ID
 
 	// Destination represents position coordinates.
 	Destination struct {
@@ -19,6 +15,10 @@ type (
 		Longitude float64
 	}
 )
+
+func (id ID) GetID() string {
+	return string(id)
+}
 
 // Order represents Order service domain.
 // User order should be created by client and passed through network and deserialized into Order.
@@ -30,11 +30,14 @@ type Order struct { //nolint:govet
 	// RestaurantID states for Restaurant id.
 	RestaurantID ID
 
-	// UserID states for User id.
-	UserID ID
+	// CustomerID states for User id.
+	CustomerID ID
+
+	// CourierID states for courier id.
+	CourierID ID
 
 	// Meals contain meals` id that user have selected in a specific restaurant.
-	Meals []MealID
+	Meals []ID
 
 	// Destination contains geo position of where Order should be delivered.
 	Destination Destination
@@ -59,6 +62,16 @@ type Order struct { //nolint:govet
 	FinishedAt time.Time
 }
 
+func (o *Order) GetMealsID() []string {
+	arr := make([]string, len(o.Meals))
+
+	for i, meal := range o.Meals {
+		arr[i] = meal.GetID()
+	}
+
+	return arr
+}
+
 // IsFinished return true and time if orders when Finished set to true and FinishedAt not zero.
 // Otherwise, returning false and zeroed time.
 func (o *Order) IsFinished() (bool, time.Time) {
@@ -75,7 +88,7 @@ func (o *Order) Create() {
 	o.ID = ID(uuid.NewString())
 }
 
-// NewOrder creates an order. But to set ID and CreatedAt call Create method.
+// NewOrder creates an order. But to set [Order.ID] and [Order.CreatedAt] call Create method.
 func NewOrder(
 	restaurantID, userID, transactionID string,
 	mealsIDs []string,
@@ -113,7 +126,7 @@ func NewOrder(
 
 	return &Order{
 		RestaurantID:  rid,
-		UserID:        uid,
+		CustomerID:    uid,
 		Meals:         meals,
 		CashPayment:   cashPayment,
 		Destination:   Destination{Latitude: latitude, Longitude: longitude},
@@ -133,17 +146,17 @@ func NewID(id string) (ID, error) {
 
 // MealsID convert provided ids in slice of MealID.
 // If one error occurred while converting - an error returned.
-func MealsID(ids []string) ([]MealID, error) {
+func MealsID(ids []string) ([]ID, error) {
 	var (
 		errs    = make([]error, 0, len(ids))
-		mealIDs = make([]MealID, len(ids))
+		mealIDs = make([]ID, len(ids))
 	)
 
 	for i, id := range ids {
 		newID, err := NewID(id)
 		switch err {
 		case nil:
-			mealIDs[i] = MealID(newID)
+			mealIDs[i] = newID
 		default:
 			errs = append(errs, NewMealIDError(err, i))
 		}

@@ -65,7 +65,7 @@ func TestMealsID(t *testing.T) {
 	tests := []struct {
 		name     string
 		ids      []string
-		expected []MealID
+		expected []ID
 		errCount int
 	}{
 		{
@@ -75,10 +75,10 @@ func TestMealsID(t *testing.T) {
 				validID2,
 				validID3,
 			},
-			expected: []MealID{
-				MealID(validID1),
-				MealID(validID2),
-				MealID(validID3),
+			expected: []ID{
+				ID(validID1),
+				ID(validID2),
+				ID(validID3),
 			},
 			errCount: 0,
 		},
@@ -116,4 +116,14 @@ func TestMealsID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestID_GetID(t *testing.T) {
+	t.Run("assert GetID returns id", func(t *testing.T) {
+		validID1 := "8339957e-dd83-4754-bff4-3ec08de40ed9"
+
+		var id = ID(validID1)
+
+		assert.Equal(t, validID1, id.GetID())
+	})
 }

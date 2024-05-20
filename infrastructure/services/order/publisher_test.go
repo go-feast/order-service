@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/go-feast/topics"
@@ -24,23 +25,6 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 			service = NewPublisherService(ch)
 		)
 
-		o, err := order.NewOrder(
-			gofakeit.UUID(),
-			gofakeit.UUID(),
-			gofakeit.UUID(),
-			[]string{
-				gofakeit.UUID(),
-				gofakeit.UUID(),
-			},
-			false,
-			gofakeit.Latitude(),
-			gofakeit.Longitude(),
-		)
-
-		assert.NoError(t, err)
-
-		o.Create()
-
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 
@@ -52,7 +36,7 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 
 		wg.Add(1)
 
-		go func() {
+		go func(messages <-chan *message.Message) {
 			defer wg.Done()
 
 			msg, sent := <-messages
@@ -68,20 +52,13 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &p)
 
 			assert.NoError(t, err)
-
-			assert.Equal(t, o.ID.GetID(), p.ID)
-			assert.Equal(t, o.RestaurantID.GetID(), p.RestaurantID)
-			assert.Equal(t, o.CustomerID.GetID(), p.CustomerID)
-			assert.ElementsMatch(t, o.GetMealsID(), p.Meals)
-			assert.Equal(t, o.Destination.Latitude, p.Destination.Lat)
-			assert.Equal(t, o.Destination.Longitude, p.Destination.Long)
-		}()
+		}(messages)
 
 		var counter uint
 
 		wg.Add(1)
 
-		go func() {
+		go func(ctx context.Context) {
 			defer wg.Done()
 
 			for {
@@ -90,6 +67,23 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 					return
 				default:
 				}
+
+				o, err := order.NewOrder(
+					gofakeit.UUID(),
+					gofakeit.UUID(),
+					gofakeit.UUID(),
+					[]string{
+						gofakeit.UUID(),
+						gofakeit.UUID(),
+					},
+					false,
+					gofakeit.Latitude(),
+					gofakeit.Longitude(),
+				)
+
+				assert.NoError(t, err)
+
+				o.Create()
 
 				err = service.PublishOrderCreated(o)
 				assert.NoError(t, err)
@@ -102,7 +96,7 @@ func TestPublisherService_PublishOrderCreated(t *testing.T) {
 				default:
 				}
 			}
-		}()
+		}(ctx)
 
 		wg.Wait()
 

@@ -156,11 +156,11 @@ func NewID(id string) (ID, error) {
 }
 
 func NewDestination(lat, long float64) (Destination, error) {
-	if lat >= -90 && lat <= 90 {
+	if !(lat >= -90 && lat <= 90) {
 		return Destination{}, ErrInvalidLatitude
 	}
 
-	if long >= -180 && long <= 180 {
+	if !(long >= -180 && long <= 180) {
 		return Destination{}, ErrInvalidLongitude
 	}
 

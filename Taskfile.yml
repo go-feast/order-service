@@ -6,6 +6,7 @@ vars:
   OK_COLOR: '\033[32;01m'
   NO_COLOR: '\033[0m'
   LOCAL_DOCKER_COMPOSE: docker-compose.local.yml
+  INTEGRATION_DOCKER_COMPOSE: ./testing/integration/docker-compose.yml
 
 tasks:
   help:
@@ -24,9 +25,12 @@ tasks:
       - go mod tidy
 
   test:
+    #deps:
+      #- set-up-integration-testing
     desc: Run tests
     cmds:
-      - ENVIRONMENT=testing go test -gcflags=-l -covermode=atomic -race ./...
+      - ENVIRONMENT=testing KAFKA_URL=localhost:9092 go test -gcflags=-l -covermode=atomic -race -tags "" ./...
+     # - task clean-up-after-integration-testing
 
   build-api-server:
     desc: Build service
@@ -54,6 +58,15 @@ tasks:
     cmds:
       - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics down
 
+  set-up-integration-testing:
+    desc: Set-up of Kafka, Redis, Postgres and others for integration testing
+    cmds:
+      - docker-compose -f {{.INTEGRATION_DOCKER_COMPOSE}} up -d
+
+  clean-up-after-integration-testing:
+    desc: Clean up Kafka, Redis, Postgres and others after integration testing
+    cmds:
+      - docker-compose -f {{.INTEGRATION_DOCKER_COMPOSE}} down
   default:
     cmds:
       - task: help

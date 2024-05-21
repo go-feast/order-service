@@ -2,9 +2,10 @@
   <configuration default="false" name="go test order-service" type="GoTestRunConfiguration" factoryName="Go Test">
     <module name="order-service" />
     <working_directory value="$PROJECT_DIR$" />
-    <go_parameters value="-gcflags=-l -covermode=atomic -race" />
+    <go_parameters value="-gcflags=-l -covermode=atomic -race -tags &quot;&quot;" />
     <envs>
       <env name="ENVIRONMENT" value="testing" />
+      <env name="KAFKA_URL" value="localhost:9092" />
     </envs>
     <kind value="DIRECTORY" />
     <package value="service" />
@@ -13,6 +14,7 @@
     <framework value="gotest" />
     <method v="2">
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="lint" run_configuration_type="TaskRunConfiguration" />
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="set-up-integration-testing" run_configuration_type="TaskRunConfiguration" />
     </method>
   </configuration>
 </component>

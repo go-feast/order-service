@@ -1,16 +1,19 @@
 package order
 
 import (
+	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
-	"service/domain/order"
+	"service/eserializer"
 )
 
 type Handler struct {
 	_ trace.Tracer
 
 	// publisher
-	_ order.Publisher
+	_ message.Publisher
+
+	_ eserializer.SerializeDeserializer
 
 	// metrics
 

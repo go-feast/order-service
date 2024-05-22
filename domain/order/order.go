@@ -3,130 +3,95 @@ package order
 
 import (
 	"github.com/google/uuid"
+	"service/domain/shared/destination"
 	"time"
 )
-
-type (
-	ID string
-
-	// Destination represents position coordinates.
-	Destination struct {
-		Latitude  float64
-		Longitude float64
-	}
-)
-
-func (id ID) GetID() string {
-	return string(id)
-}
 
 // Order represents Order service domain.
 // User order should be created by client and passed through network and deserialized into Order.
 // Order must contain all fields to pass for a specific service for each.
 type Order struct { //nolint:govet
 	// ID states for Order id.
-	ID ID
+	id uuid.UUID
 
-	// RestaurantID states for Restaurant id.
-	RestaurantID ID
+	// rid states for Restaurant [uuid].
+	restaurantID uuid.UUID
 
-	// CustomerID states for User id.
-	CustomerID ID
+	// CustomerID states for User [uuid].
+	customerID uuid.UUID
 
-	// CourierID states for courier id.
-	CourierID ID
+	// CourierID states for courier [uuid].
+	courierID uuid.UUID //nolint:unused
 
 	// Meals contain meals` id that user have selected in a specific restaurant.
-	Meals []ID
+	meals uuid.UUIDs
+
+	state State
+
+	// TransactionID represents payment transaction [uuid].
+	transactionID uuid.UUID
 
 	// Destination contains geo position of where Order should be delivered.
-	Destination Destination
+	destination destination.Destination
 
 	// CreatedAt represents where Order has been created.
-	CreatedAt time.Time
-
-	// CashPayment represents if order will be paid in cash or card.
-	CashPayment bool
-
-	// Paid represents if payment successful.
-	Paid bool
-
-	// TransactionID represents payment transaction id.
-	TransactionID *ID
-
-	// Finished represents if order is finished.
-	Finished bool
-
-	// Represents a timestamp when order was cooked in restaurant.
-	// By default - zeroed.
-	FinishedAt time.Time
+	createdAt time.Time
 }
 
-func (o *Order) GetMealsID() []string {
-	arr := make([]string, len(o.Meals))
-
-	for i, meal := range o.Meals {
-		arr[i] = meal.GetID()
+func (o *Order) NextState() error {
+	switch o.state {
+	case Delivered:
+		return ErrOrderDelivered
+	case Canceled:
+		return ErrOrderCanceled
+	default:
+		o.state = *(o.state.Next)
+		return nil
 	}
-
-	return arr
 }
 
-// IsFinished return true and time if orders when Finished set to true and FinishedAt not zero.
-// Otherwise, returning false and zeroed time.
-func (o *Order) IsFinished() (bool, time.Time) {
-	if o.Finished && !o.FinishedAt.IsZero() {
-		return true, o.FinishedAt
+func (o *Order) ToEvent() *JSONEventOrderCreated {
+	return &JSONEventOrderCreated{
+		OrderID:      o.id.String(),
+		CustomerID:   o.customerID.String(),
+		RestaurantID: o.restaurantID.String(),
+		Meals:        o.meals.Strings(),
+		Destination: destination.JSONDestination{
+			Latitude:  o.destination.Latitude(),
+			Longitude: o.destination.Longitude(),
+		},
 	}
-
-	return false, time.Time{}
-}
-
-// Create assign order an id and initialize a CreatedAt field.
-func (o *Order) Create() {
-	o.CreatedAt = time.Now()
-	o.ID = ID(uuid.NewString())
 }
 
 // NewOrder creates an order. But to set [Order.ID] and [Order.CreatedAt] call Create method.
 func NewOrder(
 	restaurantID, userID, transactionID string,
 	mealsIDs []string,
-	cashPayment bool,
 	latitude, longitude float64,
 ) (*Order, error) {
 	errs := make([]error, 0)
 
-	rid, err := NewID(restaurantID)
+	rid, err := uuid.Parse(restaurantID)
 	if err != nil {
 		errs = append(errs, ErrInvalidRestaurantID)
 	}
 
-	uid, err := NewID(userID)
+	uid, err := uuid.Parse(userID)
 	if err != nil {
 		errs = append(errs, ErrInvalidUserID)
 	}
 
-	meals, err := MealsID(mealsIDs)
+	meals, err := mealsID(mealsIDs)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	var (
-		tid *ID
-		id  ID
-	)
-
-	if !cashPayment {
-		id, err = NewID(transactionID)
-		if err != nil {
-			errs = append(errs, ErrInvalidTransactionID)
-		}
-
-		tid = &id
+	tid, err := uuid.Parse(transactionID)
+	if err != nil {
+		errs = append(errs, ErrInvalidTransactionID)
 	}
 
-	destination, err := NewDestination(latitude, longitude)
+	deliverTo, err := destination.NewDestination(latitude, longitude)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -136,50 +101,28 @@ func NewOrder(
 	}
 
 	return &Order{
-		RestaurantID:  rid,
-		CustomerID:    uid,
-		Meals:         meals,
-		CashPayment:   cashPayment,
-		Destination:   destination,
-		TransactionID: tid,
+		id:           uuid.New(),
+		restaurantID: rid,
+		customerID:   uid,
+		// courierID:
+		meals:         meals,
+		state:         Created,
+		transactionID: tid,
+		destination:   deliverTo,
+		createdAt:     time.Now(),
 	}, nil
 }
 
-// NewID parses provided id string and returning
-func NewID(id string) (ID, error) {
-	_, err := uuid.Parse(id)
-	if err != nil {
-		return "", err
-	}
-
-	return ID(id), nil
-}
-
-func NewDestination(lat, long float64) (Destination, error) {
-	if !(lat >= -90 && lat <= 90) {
-		return Destination{}, ErrInvalidLatitude
-	}
-
-	if !(long >= -180 && long <= 180) {
-		return Destination{}, ErrInvalidLongitude
-	}
-
-	return Destination{
-		Latitude:  lat,
-		Longitude: long,
-	}, nil
-}
-
-// MealsID convert provided ids in slice of MealID.
+// mealsID convert provided ids in slice of MealID.
 // If one error occurred while converting - an error returned.
-func MealsID(ids []string) ([]ID, error) {
+func mealsID(ids []string) (uuid.UUIDs, error) {
 	var (
 		errs    = make([]error, 0, len(ids))
-		mealIDs = make([]ID, len(ids))
+		mealIDs = make(uuid.UUIDs, len(ids))
 	)
 
 	for i, id := range ids {
-		newID, err := NewID(id)
+		newID, err := uuid.Parse(id)
 		switch err {
 		case nil:
 			mealIDs[i] = newID

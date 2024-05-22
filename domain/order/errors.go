@@ -10,8 +10,8 @@ var (
 	ErrInvalidRestaurantID  = errors.New("invalid restaurant id")
 	ErrInvalidUserID        = errors.New("invalid user id")
 	ErrInvalidTransactionID = errors.New("invalid transaction id")
-	ErrInvalidLatitude      = errors.New("invalid latitude: must be between -90 and 90")
-	ErrInvalidLongitude     = errors.New("invalid longitude: must be between -180 and 180")
+	ErrOrderDelivered       = errors.New("order delivered")
+	ErrOrderCanceled        = errors.New("order canceled")
 )
 
 type MealIDError struct {

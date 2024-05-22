@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"service/api/handlers/order"
+	"service/api/http/handlers/order"
 	"service/closer"
 	"service/config"
 	mw "service/http/middleware"

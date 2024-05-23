@@ -13,7 +13,7 @@ type Handler struct {
 	// publisher
 	_ message.Publisher
 
-	s eserializer.EventSerializer
+	_ eserializer.EventSerializer
 
 	// metrics
 

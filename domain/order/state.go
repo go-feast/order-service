@@ -14,7 +14,7 @@ func (s *State) String() string {
 }
 
 var (
-	Canceled = State{"order.canceled", nil}
+	Canceled = State{"order.canceled", &Closed}
 
 	Created = State{"order.created", &Paid}
 
@@ -30,7 +30,9 @@ var (
 
 	Delivering = State{"order.delivering", &Delivered}
 
-	Delivered = State{"order.delivered", nil}
+	Delivered = State{"order.delivered", &Closed}
+
+	Closed = State{"order.closed", nil}
 )
 
 var mapStates = map[string]State{ //nolint:unused
@@ -42,4 +44,5 @@ var mapStates = map[string]State{ //nolint:unused
 	"order.taken":            CourierTook,
 	"order.delivering":       Delivering,
 	"order.delivered":        Delivered,
+	"order.closed":           Closed,
 }

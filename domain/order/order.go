@@ -23,9 +23,16 @@ type Order struct { //nolint:govet
 	// CourierID states for courier [uuid].
 	courierID uuid.UUID //nolint:unused
 
-	// Meals contain meals` id that user have selected in a specific restaurant.
+	// meals states for meals` [uuid] that user have selected in a specific restaurant.
 	meals uuid.UUIDs
 
+	// state states for Order State. It could be one of
+	//
+	// Every State can go into Canceled State.
+	// Canceled -> Closed
+	//
+	// Created -> Paid -> Cooking -> Finished -> WaitingForCourier -> CourierTook -> Delivering -> Delivered -> Closed.
+	//
 	state State
 
 	// TransactionID represents payment transaction [uuid].
@@ -40,26 +47,21 @@ type Order struct { //nolint:govet
 
 func (o *Order) NextState() error {
 	switch o.state {
-	case Delivered:
-		return ErrOrderDelivered
-	case Canceled:
-		return ErrOrderCanceled
+	case Closed:
+		return ErrOrderClosed
 	default:
 		o.state = *(o.state.Next)
 		return nil
 	}
 }
 
-func (o *Order) ToEvent() *JSONEventOrderCreated {
-	return &JSONEventOrderCreated{
+func (o *Order) ToEvent() *EventType {
+	return &EventType{
 		OrderID:      o.id.String(),
 		CustomerID:   o.customerID.String(),
 		RestaurantID: o.restaurantID.String(),
 		Meals:        o.meals.Strings(),
-		Destination: destination.JSONDestination{
-			Latitude:  o.destination.Latitude(),
-			Longitude: o.destination.Longitude(),
-		},
+		Destination:  o.destination,
 	}
 }
 

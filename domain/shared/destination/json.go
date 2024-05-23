@@ -1,8 +1,11 @@
 package destination
 
+import "service/eserializer"
+
 type JSONDestination struct {
-	Latitude  float64 `json:"latitude,omitempty"`
-	Longitude float64 `json:"longitude,omitempty"`
+	eserializer.Event
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 func (d Destination) ToJSON() JSONDestination {

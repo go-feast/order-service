@@ -10,8 +10,7 @@ var (
 	ErrInvalidRestaurantID  = errors.New("invalid restaurant id")
 	ErrInvalidUserID        = errors.New("invalid user id")
 	ErrInvalidTransactionID = errors.New("invalid transaction id")
-	ErrOrderDelivered       = errors.New("order delivered")
-	ErrOrderCanceled        = errors.New("order canceled")
+	ErrOrderClosed          = errors.New("order closed")
 )
 
 type MealIDError struct {

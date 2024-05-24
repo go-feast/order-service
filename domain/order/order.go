@@ -45,14 +45,12 @@ type Order struct { //nolint:govet
 	createdAt time.Time
 }
 
-func (o *Order) NextState() error {
-	switch o.state {
-	case Closed:
-		return ErrOrderClosed
-	default:
-		o.state = *(o.state.Next)
-		return nil
-	}
+func (o *Order) IsCanceled() bool {
+	return o.state == Canceled
+}
+
+func (o *Order) IsClosed() bool {
+	return o.state == Closed
 }
 
 func (o *Order) ToEvent() *EventType {

@@ -35,6 +35,19 @@ var (
 	Closed = State{"order.closed", nil}
 )
 
+var stateList = []State{
+	Created,
+	Paid,
+	Cooking,
+	Finished,
+	WaitingForCourier,
+	CourierTook,
+	Delivering,
+	Delivered,
+	Canceled,
+	Closed,
+}
+
 var mapStates = map[string]State{ //nolint:unused
 	"order.created":          Created,
 	"order.paid":             Paid,

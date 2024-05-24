@@ -1,18 +1,20 @@
 package order
 
-import (
-	"slices"
-)
-
+// StateOperator provides methods to operate with order state.
+// USe StateOperator to operate on order state.
 type StateOperator struct {
 	o *Order
 }
 
+// NewStateOperator creates a new StateOperator.
 func NewStateOperator(o *Order) *StateOperator {
 	return &StateOperator{o: o}
 }
 
 // CancelOrder set orders`s state to [Canceled].
+// If order is already canceled, it returns the order with canceled flag set to true.
+// If order is closed, it returns an error.
+//
 // Returning values: order, canceled(bool), error
 func (s *StateOperator) CancelOrder() (*Order, bool, error) {
 	if s.o.IsCanceled() {
@@ -23,20 +25,23 @@ func (s *StateOperator) CancelOrder() (*Order, bool, error) {
 }
 
 // trySetState tries set state to the order.
-// If state to replace is behind current state, ErrCannotSetState is returned.
-func (s *StateOperator) trySetState(state State) (*Order, bool, error) {
+// If next state is [Canceled] or [Closed] it sets it immediately.
+// Otherwise, it checks if the next state is the same as the current order state.
+// If it is, it sets the next state.
+// Returning values: Order, changed(bool), error
+func (s *StateOperator) trySetState(next State) (*Order, bool, error) {
 	if s.o.IsClosed() {
 		return nil, false, ErrOrderClosed
 	}
 
-	if state == Canceled || state == Closed {
-		s.setState(state)
+	if next == Canceled || next == Closed {
+		s.setState(next)
 		return s.o, true, nil
 	}
 
 	orderState := s.o.state
 
-	if orderState.Next.Name != state.Name {
+	if orderState.Next.Name != next.Name {
 		return nil, false, ErrCannotSetState
 	}
 
@@ -53,16 +58,4 @@ func (s *StateOperator) nextState() {
 // setState sets provided state to the current order.
 func (s *StateOperator) setState(state State) {
 	s.o.state = state
-}
-
-// getStateIndexes returns current order`s state index and replacing state index from stateList.
-func (s *StateOperator) getStateIndexes(state State) (currentStateIndex, replacingState int, err error) {
-	currentStateIndex = slices.Index(stateList, s.o.state)
-	replacingState = slices.Index(stateList, state)
-
-	if currentStateIndex == -1 || replacingState == -1 {
-		return -1, -1, ErrNoSuchState
-	}
-
-	return
 }

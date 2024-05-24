@@ -8,51 +8,54 @@ import (
 )
 
 // Order represents Order service domain.
-// User order should be created by client and passed through network and deserialized into Order.
-// Order must contain all fields to pass for a specific service for each.
+// Should be created by client and passed through network and deserialized into Order.
 type Order struct { //nolint:govet
-	// ID states for Order id.
+	// id states for Order [uuid].
 	id uuid.UUID
 
-	// rid states for Restaurant [uuid].
+	// restaurantID states for restaurant [uuid].
 	restaurantID uuid.UUID
 
-	// CustomerID states for User [uuid].
+	// customerID states for user [uuid].
 	customerID uuid.UUID
 
-	// CourierID states for courier [uuid].
+	// courierID states for courier [uuid].
 	courierID uuid.UUID //nolint:unused
 
-	// meals states for meals` [uuid] that user have selected in a specific restaurant.
+	// meals states for meals` [uuid] that user selected in a specific restaurant.
 	meals uuid.UUIDs
 
-	// state states for Order State. It could be one of
+	// state states for Order State.
 	//
-	// Every State can go into Canceled State.
+	// Every State can go into Canceled State. But the only way where Canceled can go into is Closed.
 	// Canceled -> Closed
 	//
+	// State machine for an order:
 	// Created -> Paid -> Cooking -> Finished -> WaitingForCourier -> CourierTook -> Delivering -> Delivered -> Closed.
 	//
 	state State
 
-	// TransactionID represents payment transaction [uuid].
+	// transactionID represents payment transaction [uuid].
 	transactionID uuid.UUID
 
-	// Destination contains geo position of where Order should be delivered.
+	// destination contains geo position of where Order should be delivered.
 	destination destination.Destination
 
-	// CreatedAt represents where Order has been created.
+	// createdAt represents where Order has been created.
 	createdAt time.Time
 }
 
+// IsCanceled shows if order has been canceled.
 func (o *Order) IsCanceled() bool {
 	return o.state == Canceled
 }
 
+// IsClosed shows if order has been closed.
 func (o *Order) IsClosed() bool {
 	return o.state == Closed
 }
 
+// ToEvent converts Order to EventType.
 func (o *Order) ToEvent() *EventType {
 	return &EventType{
 		OrderID:      o.id.String(),
@@ -63,7 +66,7 @@ func (o *Order) ToEvent() *EventType {
 	}
 }
 
-// NewOrder creates an order. But to set [Order.ID] and [Order.CreatedAt] call Create method.
+// NewOrder creates new Order.
 func NewOrder(
 	restaurantID, userID, transactionID string,
 	mealsIDs []string,

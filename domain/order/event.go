@@ -5,6 +5,7 @@ import (
 	"service/eserializer"
 )
 
+// EventType provides methods for converting Order for different marshaling strategies.
 type EventType struct {
 	OrderID      string
 	CustomerID   string
@@ -13,6 +14,7 @@ type EventType struct {
 	Destination  destination.Destination
 }
 
+// ToJSON converts EventType to JSONEventOrderCreated.
 func (t *EventType) ToJSON() JSONEventOrderCreated {
 	return JSONEventOrderCreated{
 		OrderID:      t.OrderID,
@@ -23,6 +25,7 @@ func (t *EventType) ToJSON() JSONEventOrderCreated {
 	}
 }
 
+// JSONEventOrderCreated provides JSON representation of Order.
 type JSONEventOrderCreated struct {
 	eserializer.Event
 	OrderID      string                      `json:"order_id"`

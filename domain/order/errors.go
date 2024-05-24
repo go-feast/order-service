@@ -12,8 +12,6 @@ var (
 	ErrInvalidTransactionID = errors.New("invalid transaction id")
 	ErrOrderClosed          = errors.New("order closed")
 	ErrCannotSetState       = errors.New("cannot set state")
-	ErrNoSuchState          = errors.New("no such state")
-	ErrCannotSetPastState   = errors.New("cannot set past state")
 )
 
 type MealIDError struct {

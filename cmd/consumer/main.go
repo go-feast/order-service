@@ -109,7 +109,7 @@ func main() {
 		pubSubLogger,
 	)
 	if err != nil {
-		logger.Panic().Err(err).Msg("failed to create kafka publisher")
+		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
 	}
 
 	closers := RegisterConsumerHandlers(router, subscriber, publisher)

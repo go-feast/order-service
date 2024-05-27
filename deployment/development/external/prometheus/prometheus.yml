@@ -12,4 +12,4 @@ scrape_configs:
     static_configs:
       # metric port. app - represents host+port. In docker-compose our service labeled as "app".
       - targets: ["service:8081"]
-      - targets: ["service-consumer:8082"]
+      - targets: ["service-consumer:8083"]

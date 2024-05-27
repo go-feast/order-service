@@ -9,9 +9,7 @@ x-service-volume:  &service-volume
   source: ./
   target: /app
 
-
 services:
-
   service-consumer:
     environment:
       ENVIRONMENT: production
@@ -19,12 +17,14 @@ services:
       METRICS_PORT: 8082
       DB_URL: db
       REDIS_URL: redis
-      KAFKA_URL: kafka:9092
+      KAFKA_URL: kafka:29092
       OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
     build:
-      dockerfile: local.consumer.Dockerfile
+      dockerfile: Dockerfile
       context: ./
-      target: dev
+      target: dev_consumer
+      args:
+        - metric_port_consumer=8083
     restart: on-failure
     volumes:
       - *service-volume
@@ -37,7 +37,7 @@ services:
       - "-build=/go/bin/task build-api-consumer"
       - "-command=/app/bin/api-consumer"
     ports:
-      - "8082:8082" # metric server port
+      - "8083:8083" # metric server port. Make sure u change it in deployment/development/external/prometheus.yml
 
   service:
     environment:
@@ -48,15 +48,18 @@ services:
         METRICS_PORT: 8081
         DB_URL: db # to change
         REDIS_URL: redis # to change
-        KAFKA_URL: kafka:9092
+        KAFKA_URL: kafka:29092
         OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
         SERVER_WRITETIMEOUT: 10s
         SERVER_READTIMEOUT: 5s
         SERVER_IDLETIMEOUT: 5s
     build:
-      dockerfile: local.service.Dockerfile
+      dockerfile: Dockerfile
       context: ./
-      target: dev
+      target: dev_service
+      args:
+        - service_port=8080
+        - service_metrics_port=8081
     restart: on-failure
     volumes:
       - *service-volume
@@ -98,23 +101,18 @@ services:
     depends_on:
       - service
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.1
-    restart: unless-stopped
-    logging:
-      driver: none
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-
   kafka:
-    image: confluentinc/cp-kafka:7.3.1
-    restart: unless-stopped
-    depends_on:
-      - zookeeper
-    logging:
-      driver: none
+    image: confluentinc/confluent-local:7.6.0
+    hostname: broker
+    container_name: broker
+    ports:
+      - "8082:8082"
+      - "9092:9092"
+      - "9101:9101"
     environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_NUM_PARTITIONS: '3'
+    networks:
+      - api

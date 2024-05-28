@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"service/metrics"
+	"strconv"
 	"time"
 )
 
@@ -15,8 +16,9 @@ const (
 )
 
 type wrappedResponseWriter struct {
-	w    http.ResponseWriter
-	code string
+	w       http.ResponseWriter
+	code    string
+	codeInt int
 }
 
 func (w *wrappedResponseWriter) Header() http.Header {
@@ -28,7 +30,8 @@ func (w *wrappedResponseWriter) Write(bytes []byte) (int, error) {
 }
 
 func (w *wrappedResponseWriter) WriteHeader(statusCode int) {
-	w.code = http.StatusText(statusCode)
+	w.codeInt = statusCode
+	w.code = strconv.Itoa(statusCode)
 	w.w.WriteHeader(statusCode)
 }
 

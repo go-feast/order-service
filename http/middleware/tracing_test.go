@@ -26,8 +26,6 @@ func TestMain(m *testing.M) {
 
 func TestResolveTraceIDInHTTP(t *testing.T) {
 	t.Run("assert span passed through http", func(t *testing.T) {
-		ctx := context.Background()
-
 		testserver := httptest.NewServer(
 			ResolveTraceIDInHTTP("testing")(
 				http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
@@ -41,7 +39,7 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 				})))
 		defer testserver.Close()
 
-		ctx, cancelFunc := context.WithCancel(ctx)
+		ctx, cancelFunc := context.WithCancel(context.Background())
 
 		resp, e := otelhttp.Get(ctx, testserver.URL)
 		require.NoError(t, e)

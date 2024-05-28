@@ -50,8 +50,6 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 		cancelFunc()
 	})
 	t.Run("assert span generated into middleware", func(t *testing.T) {
-		ctx := context.Background()
-
 		testserver := httptest.NewServer(
 			ResolveTraceIDInHTTP("testing")(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 				span := trace.SpanFromContext(r.Context())
@@ -64,11 +62,10 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 			})))
 		defer testserver.Close()
 
-		ctx, cancelFunc := context.WithCancel(ctx)
 		resp, e := http.Get(testserver.URL)
-		require.NoError(t, e)
-		defer resp.Body.Close() //nolint:errcheck
 
-		cancelFunc()
+		require.NoError(t, e)
+
+		defer resp.Body.Close() //nolint:errcheck
 	})
 }

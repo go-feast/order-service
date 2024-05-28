@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -51,6 +53,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
+	pubSubLogger := logging.NewPubSubLogger()
+
+	publisher, err := kafka.NewPublisher(
+		kafka.PublisherConfig{
+			Brokers:   c.Kafka.KafkaURL,
+			Marshaler: kafka.DefaultMarshaler{},
+		},
+		pubSubLogger,
+	)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
+	}
+
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
@@ -73,13 +88,13 @@ func main() {
 
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
-	// metric server
 
+	// metric server
 	metricServer, metricRouter := serv.NewServer(c.MetricServer)
 
 	// register routes
 	//		main
-	fc := RegisterMainServiceRoutes(mainRouter)
+	fc := RegisterMainServiceRoutes(mainRouter, publisher)
 
 	forClose.AppendClosers(fc...)
 	//		metric
@@ -101,7 +116,7 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
+func RegisterMainServiceRoutes(r chi.Router, _ message.Publisher) []io.Closer { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
@@ -109,12 +124,9 @@ func RegisterMainServiceRoutes(r chi.Router) []io.Closer { //nolint:unparam
 	handler := order.NewHandler()
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
-		Route("/order", func(r chi.Router) {
-			r.Post("/", handler.TakeOrder)
-			r.Route("/{id}", func(r chi.Router) {
-				// maybe should post an event on cooked order
-				// sets finished to an order
-				r.Post("/finished", nil)
+		Route("/api/v1", func(r chi.Router) {
+			r.Route("/order", func(r chi.Router) {
+				r.Post("/", handler.TakeOrder)
 			})
 		})
 

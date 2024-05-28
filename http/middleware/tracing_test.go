@@ -9,10 +9,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
-	"service/config"
-	"service/logging"
-	serv "service/server"
 	"service/tracing"
 	"testing"
 )
@@ -30,43 +28,32 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 	t.Run("assert span passed through http", func(t *testing.T) {
 		ctx := context.Background()
 
-		server, router := serv.NewServer(&config.MainServiceServerConfig{Host: "127.0.0.1", Port: "40000"})
+		testserver := httptest.NewServer(
+			ResolveTraceIDInHTTP("testing")(
+				http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+					span := trace.SpanFromContext(r.Context())
+					defer span.End()
 
-		router.
-			With(ResolveTraceIDInHTTP("testing")).
-			Get("/", func(_ http.ResponseWriter, r *http.Request) {
-				span := trace.SpanFromContext(r.Context())
-				defer span.End()
-
-				ctx := span.SpanContext()
-				assert.True(t, ctx.HasTraceID())
-				assert.True(t, ctx.IsRemote())
-				assert.True(t, ctx.HasSpanID())
-			})
+					ctx := span.SpanContext()
+					assert.True(t, ctx.HasTraceID())
+					assert.True(t, ctx.IsRemote())
+					assert.True(t, ctx.HasSpanID())
+				})))
+		defer testserver.Close()
 
 		ctx, cancelFunc := context.WithCancel(ctx)
-		started, err := serv.Run(ctx, server)
 
-		<-started
-
-		resp, e := otelhttp.Get(ctx, "http://127.0.0.1:40000/")
+		resp, e := otelhttp.Get(ctx, testserver.URL)
 		require.NoError(t, e)
 		defer resp.Body.Close() //nolint:errcheck
 
 		cancelFunc()
-
-		for e = range err {
-			logging.NewNopLogger().Err(e).Send()
-		}
 	})
 	t.Run("assert span generated into middleware", func(t *testing.T) {
 		ctx := context.Background()
 
-		server, router := serv.NewServer(&config.MainServiceServerConfig{Host: "127.0.0.1", Port: "40000"})
-
-		router.
-			With(ResolveTraceIDInHTTP("testing")).
-			Get("/", func(_ http.ResponseWriter, r *http.Request) {
+		testserver := httptest.NewServer(
+			ResolveTraceIDInHTTP("testing")(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 				span := trace.SpanFromContext(r.Context())
 				defer span.End()
 
@@ -74,21 +61,14 @@ func TestResolveTraceIDInHTTP(t *testing.T) {
 				assert.True(t, ctx.HasTraceID())
 				assert.False(t, ctx.IsRemote())
 				assert.True(t, ctx.HasSpanID())
-			})
+			})))
+		defer testserver.Close()
 
 		ctx, cancelFunc := context.WithCancel(ctx)
-		started, err := serv.Run(ctx, server)
-
-		<-started
-
-		resp, e := http.Get("http://127.0.0.1:40000/")
+		resp, e := http.Get(testserver.URL)
 		require.NoError(t, e)
 		defer resp.Body.Close() //nolint:errcheck
 
 		cancelFunc()
-
-		for e = range err {
-			logging.NewNopLogger().Err(e).Send()
-		}
 	})
 }

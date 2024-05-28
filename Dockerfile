@@ -1,13 +1,16 @@
 FROM golang:1.22.2-alpine as builder
 
+WORKDIR /app
+
+ARG service_port=8080
+ARG metric_port_service=8081
+ARG metric_port_consumer=8082
 
 RUN apk update && \
     apk add --no-cache git &&\
     apk add --no-cache curl
 
 FROM builder as local
-
-WORKDIR /app
 
 RUN go install github.com/go-task/task/v3/cmd/task@latest && \
     go install github.com/githubnemo/CompileDaemon@latest
@@ -21,21 +24,17 @@ RUN go mod download
 
 FROM local as dev_service
 
-ARG service_port=8080
-ARG metric_port_service=8081
+ARG service_port
+ARG metric_port_service
 
 EXPOSE ${service_port}
 EXPOSE ${metric_port_service}
 
-
-
 FROM local as dev_consumer
 
-ARG metric_port_consumer=8082
+ARG metric_port_consumer
 
 EXPOSE ${metric_port_consumer}
-
-
 
 FROM builder as service_builder
 
@@ -57,10 +56,11 @@ FROM alpine:latest as prod_service
 
 WORKDIR /app
 
-COPY --from=service_builder /app/bin/api-server .
-
 ARG service_port
 ARG service_metrics_port
+
+COPY --from=service_builder /app/bin/api-server .
+
 
 EXPOSE ${service_port}
 EXPOSE ${service_metrics_port}
@@ -87,9 +87,10 @@ FROM alpine:latest as prod_consumer
 
 WORKDIR /app
 
+ARG consumer_metrics_port
+
 COPY --from=consumer_builder /app/bin/api-consumer .
 
-ARG consumer_metrics_port
 
 EXPOSE ${consumer_metrics_port}
 

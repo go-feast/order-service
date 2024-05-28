@@ -2,9 +2,9 @@ FROM golang:1.22.2-alpine as builder
 
 WORKDIR /app
 
-ARG service_port=8080
-ARG metric_port_service=8081
-ARG metric_port_consumer=8082
+ARG service_port
+ARG metric_port_service
+ARG metric_port_consumer
 
 RUN apk update && \
     apk add --no-cache git &&\
@@ -95,7 +95,3 @@ COPY --from=consumer_builder /app/bin/api-consumer .
 EXPOSE ${consumer_metrics_port}
 
 CMD ["./api-consumer"]
-
-
-
-

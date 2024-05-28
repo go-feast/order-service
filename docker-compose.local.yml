@@ -9,7 +9,9 @@ x-service-volume:  &service-volume
   source: ./
   target: /app
 
+
 services:
+
   service-consumer:
     environment:
       ENVIRONMENT: production

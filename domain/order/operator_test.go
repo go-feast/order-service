@@ -10,7 +10,6 @@ func createOperator(t *testing.T) *StateOperator {
 	order, err := NewOrder(
 		uuid.NewString(),
 		uuid.NewString(),
-		uuid.NewString(),
 		[]string{
 			uuid.NewString(), uuid.NewString(),
 		},
@@ -26,7 +25,6 @@ func createOperator(t *testing.T) *StateOperator {
 func TestNewStateOperator(t *testing.T) {
 	t.Run("assert NewStateOperator sets order", func(t *testing.T) {
 		order, err := NewOrder(
-			uuid.NewString(),
 			uuid.NewString(),
 			uuid.NewString(),
 			[]string{
@@ -67,7 +65,7 @@ func TestStateOperator_trySetState(t *testing.T) {
 
 		wantErr bool
 
-		canceled    bool
+		setted      bool
 		expectedErr error
 	}{
 		{
@@ -75,8 +73,8 @@ func TestStateOperator_trySetState(t *testing.T) {
 			operatorState:  Delivering,
 			replacingState: Delivered,
 
-			wantErr:  false,
-			canceled: true,
+			wantErr: false,
+			setted:  true,
 		},
 		{
 			name:           "set state to the closed order",
@@ -84,7 +82,7 @@ func TestStateOperator_trySetState(t *testing.T) {
 			replacingState: Delivering,
 
 			wantErr:     true,
-			canceled:    false,
+			setted:      false,
 			expectedErr: ErrOrderClosed,
 		},
 		{
@@ -92,16 +90,16 @@ func TestStateOperator_trySetState(t *testing.T) {
 			operatorState:  Created,
 			replacingState: Canceled,
 
-			wantErr:  false,
-			canceled: true,
+			wantErr: false,
+			setted:  true,
 		},
 		{
-			name:           "canceling canceled order",
+			name:           "canceling setted order",
 			operatorState:  Canceled,
 			replacingState: Canceled,
 
-			wantErr:  false,
-			canceled: true,
+			wantErr: false,
+			setted:  true,
 		},
 		{
 			name:           "canceling closed order",
@@ -109,7 +107,7 @@ func TestStateOperator_trySetState(t *testing.T) {
 			replacingState: Canceled,
 
 			wantErr:     true,
-			canceled:    false,
+			setted:      false,
 			expectedErr: ErrOrderClosed,
 		},
 		{
@@ -118,8 +116,17 @@ func TestStateOperator_trySetState(t *testing.T) {
 			replacingState: Cooking,
 
 			wantErr:     true,
-			canceled:    false,
-			expectedErr: ErrCannotSetState,
+			setted:      false,
+			expectedErr: ErrInvalidState,
+		},
+		{
+			name:           "setting state to the setted order",
+			operatorState:  Canceled,
+			replacingState: Cooking,
+
+			wantErr:     true,
+			setted:      false,
+			expectedErr: ErrOrderCanceled,
 		},
 	}
 	for _, testCase := range testCases {
@@ -136,55 +143,171 @@ func TestStateOperator_trySetState(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			assert.Equal(t, tc.canceled, canceled)
+			assert.Equal(t, tc.setted, canceled)
 		})
 	}
 }
 
-func TestStateOperator_CancelOrder(t *testing.T) {
+func TestStateOperator_OrderAny(t *testing.T) {
+	operator := createOperator(t)
+
 	testCases := []struct { //nolint:govet
 		name string
 
 		operatorState  State
 		replacingState State
 
+		changingStateFunc func() (*Order, bool, error)
+
 		wantErr bool
 
-		canceled    bool
+		setted      bool
 		expectedErr error
 	}{
 		{
-			name:           "OK",
-			operatorState:  Delivering,
-			replacingState: Canceled,
+			name:           "from created to paid",
+			operatorState:  Created,
+			replacingState: Paid,
 
-			wantErr:  false,
-			canceled: true,
+			changingStateFunc: operator.PayOrder,
+
+			wantErr: false,
+			setted:  true,
 		},
 		{
-			name:           "cancel canceled",
-			operatorState:  Canceled,
-			replacingState: Canceled,
+			name:           "from paid to cooking",
+			operatorState:  Paid,
+			replacingState: Cooking,
 
-			wantErr:  false,
-			canceled: true,
+			changingStateFunc: operator.CookOrder,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from cooking to finished",
+			operatorState:  Cooking,
+			replacingState: Finished,
+
+			changingStateFunc: operator.OrderFinished,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from finished to waiting for courier",
+			operatorState:  Finished,
+			replacingState: WaitingForCourier,
+
+			changingStateFunc: operator.WaitForCourier,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from waiting for courier to courier took",
+			operatorState:  WaitingForCourier,
+			replacingState: CourierTook,
+
+			changingStateFunc: operator.CourierTookOrder,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from courier took to delivering",
+			operatorState:  CourierTook,
+			replacingState: Delivering,
+
+			changingStateFunc: operator.DeliveringOrder,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from delivering to delivered",
+			operatorState:  Delivering,
+			replacingState: Delivered,
+
+			changingStateFunc: operator.OrderDelivered,
+
+			wantErr: false,
+			setted:  true,
+		},
+		{
+			name:           "from delivered to closed",
+			operatorState:  Delivered,
+			replacingState: Closed,
+
+			changingStateFunc: operator.CloseOrder,
+
+			wantErr: false,
+			setted:  true,
 		},
 	}
 	for _, testCase := range testCases {
 		tc := testCase
 		t.Run(tc.name, func(t *testing.T) {
-			operator := createOperator(t)
-
 			operator.o.state = tc.operatorState
 
-			_, canceled, err := operator.CancelOrder()
+			_, setted, err := tc.changingStateFunc()
 			if tc.wantErr {
 				assert.ErrorIs(t, err, tc.expectedErr)
 			} else {
 				assert.NoError(t, err)
 			}
 
-			assert.Equal(t, tc.canceled, canceled)
+			assert.Equal(t, tc.setted, setted)
 		})
+	}
+}
+
+func TestStateOperator_FromAnyStateToCanceled(t *testing.T) {
+	operator := createOperator(t)
+	states := []State{
+		Created,
+		Paid,
+		Cooking,
+		Finished,
+		WaitingForCourier,
+		CourierTook,
+		Delivering,
+		Delivered,
+	}
+
+	for _, state := range states {
+		operator.o.state = state
+
+		order, canceled, err := operator.CancelOrder()
+
+		assert.NotNil(t, order)
+		assert.True(t, order.Is(Canceled))
+		assert.True(t, canceled)
+		assert.NoError(t, err)
+	}
+}
+
+func TestStateOperator_FromAnyStateToClosed(t *testing.T) {
+	operator := createOperator(t)
+	states := []State{
+		Created,
+		Paid,
+		Cooking,
+		Finished,
+		WaitingForCourier,
+		CourierTook,
+		Delivering,
+		Delivered,
+	}
+
+	for _, state := range states {
+		operator.o.state = state
+
+		order, canceled, err := operator.CloseOrder()
+
+		assert.NotNil(t, order)
+		assert.True(t, order.Is(Closed))
+		assert.True(t, canceled)
+		assert.NoError(t, err)
 	}
 }

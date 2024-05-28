@@ -12,10 +12,11 @@ func (s State) String() string { return s.Name }
 
 // State machine for an order:
 // Created -> Paid -> Cooking -> Finished -> WaitingForCourier -> CourierTook -> Delivering -> Delivered -> Closed.
+//
 // Every State can go into Canceled State. But the only way where Canceled can go into is Closed.
 // Canceled -> Closed.
 var (
-	Canceled = State{"order.canceled", &Closed}
+	Canceled = State{"order.setted", &Closed}
 
 	Created = State{"order.created", &Paid}
 

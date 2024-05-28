@@ -3,6 +3,7 @@ package order
 
 import (
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"service/domain/shared/destination"
 	"time"
 )
@@ -45,14 +46,25 @@ type Order struct { //nolint:govet
 	createdAt time.Time
 }
 
-// IsCanceled shows if order has been canceled.
-func (o *Order) IsCanceled() bool {
-	return o.state == Canceled
+func (o *Order) ID() uuid.UUID {
+	return o.id
 }
 
-// IsClosed shows if order has been closed.
-func (o *Order) IsClosed() bool {
-	return o.state == Closed
+func (o *Order) RestaurantID() uuid.UUID {
+	return o.restaurantID
+}
+
+func (o *Order) CustomerID() uuid.UUID {
+	return o.customerID
+}
+
+func (o *Order) CreateAt() time.Time {
+	return o.createdAt
+}
+
+// Is shows if Order`s state matching state.
+func (o *Order) Is(state State) bool {
+	return o.state == state
 }
 
 // ToEvent converts Order to EventType.
@@ -68,7 +80,7 @@ func (o *Order) ToEvent() *EventType {
 
 // NewOrder creates new Order.
 func NewOrder(
-	restaurantID, userID, transactionID string,
+	restaurantID, userID string,
 	mealsIDs []string,
 	latitude, longitude float64,
 ) (*Order, error) {
@@ -76,27 +88,22 @@ func NewOrder(
 
 	rid, err := uuid.Parse(restaurantID)
 	if err != nil {
-		errs = append(errs, ErrInvalidRestaurantID)
+		errs = append(errs, errors.WithMessage(err, "cannot parse restaurant id"))
 	}
 
 	uid, err := uuid.Parse(userID)
 	if err != nil {
-		errs = append(errs, ErrInvalidUserID)
+		errs = append(errs, errors.WithMessage(err, "cannot parse user id"))
 	}
 
 	meals, err := mealsID(mealsIDs)
 	if err != nil {
-		errs = append(errs, err)
-	}
-
-	tid, err := uuid.Parse(transactionID)
-	if err != nil {
-		errs = append(errs, ErrInvalidTransactionID)
+		errs = append(errs, errors.WithMessage(err, "cannot parse meals` id"))
 	}
 
 	deliverTo, err := destination.NewDestination(latitude, longitude)
 	if err != nil {
-		errs = append(errs, err)
+		errs = append(errs, errors.WithMessage(err, "cannot resolve destination"))
 	}
 
 	if len(errs) != 0 {
@@ -104,13 +111,13 @@ func NewOrder(
 	}
 
 	return &Order{
-		id:           uuid.New(),
-		restaurantID: rid,
-		customerID:   uid,
-		// courierID:
+		id:            uuid.New(),
+		restaurantID:  rid,
+		customerID:    uid,
+		courierID:     uuid.Nil,
 		meals:         meals,
 		state:         Created,
-		transactionID: tid,
+		transactionID: uuid.Nil,
 		destination:   deliverTo,
 		createdAt:     time.Now(),
 	}, nil
@@ -130,7 +137,7 @@ func mealsID(ids []string) (uuid.UUIDs, error) {
 		case nil:
 			mealIDs[i] = newID
 		default:
-			errs = append(errs, NewMealIDError(err, i))
+			errs = append(errs, errors.Wrapf(err, "invalid meal id on index: %d", i))
 		}
 	}
 

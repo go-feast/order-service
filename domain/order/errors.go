@@ -7,17 +7,10 @@ import (
 )
 
 var (
-	ErrInvalidRestaurantID  = errors.New("invalid restaurant id")
-	ErrInvalidUserID        = errors.New("invalid user id")
-	ErrInvalidTransactionID = errors.New("invalid transaction id")
-	ErrOrderClosed          = errors.New("order closed")
-	ErrCannotSetState       = errors.New("cannot set state")
+	ErrInvalidState  = errors.New("invalid state")
+	ErrOrderClosed   = errors.New("order closed")
+	ErrOrderCanceled = errors.New("order setted")
 )
-
-type MealIDError struct {
-	Err   error
-	Index int
-}
 
 type MultipleErrors struct {
 	Prefix string  `json:",omitempty"`
@@ -38,18 +31,10 @@ func (m *MultipleErrors) Error() string {
 			sb.WriteString(", ")
 		}
 
-		sb.WriteString(fmt.Sprintf("%v", err))
+		sb.WriteString(fmt.Sprintf("%s", err))
 	}
 
 	sb.WriteString("]")
 
 	return sb.String()
-}
-
-func (m MealIDError) Error() string {
-	return fmt.Errorf("invalid id(index=%d): %w", m.Index, m.Err).Error()
-}
-
-func NewMealIDError(err error, index int) error {
-	return &MealIDError{Err: err, Index: index}
 }

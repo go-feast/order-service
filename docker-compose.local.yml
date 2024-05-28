@@ -22,9 +22,9 @@ services:
       KAFKA_URL: kafka:9092
       OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
     build:
-      dockerfile: local.consumer.Dockerfile
+      dockerfile: Dockerfile
       context: ./
-      target: dev
+      target: dev_consumer
     restart: on-failure
     volumes:
       - *service-volume
@@ -37,7 +37,7 @@ services:
       - "-build=/go/bin/task build-api-consumer"
       - "-command=/app/bin/api-consumer"
     ports:
-      - "8082:8082" # metric server port
+      - "8083:8083" # metric server port
 
   service:
     environment:
@@ -54,9 +54,9 @@ services:
         SERVER_READTIMEOUT: 5s
         SERVER_IDLETIMEOUT: 5s
     build:
-      dockerfile: local.service.Dockerfile
+      dockerfile: Dockerfile
       context: ./
-      target: dev
+      target: dev_service
     restart: on-failure
     volumes:
       - *service-volume

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="go build service/cmd/consumer" type="GoApplicationRunConfiguration" factoryName="Go Application">
-    <module name="resty-service-template" />
+    <module name="order-service" />
     <working_directory value="$PROJECT_DIR$" />
     <envs>
       <env name="DB_URL" value="localhost:5432" />
@@ -8,7 +8,7 @@
       <env name="KAFKA_URL" value="http://localhost:1111" />
       <env name="METRICS_HOST" value="localhost" />
       <env name="METRICS_PORT" value="8081" />
-      <env name="OTEL_EXPORTER_OTLP_TRACE_ENDPOINT" value="http://localhost:4318" />
+      <env name="OTEL_EXPORTER_OTLP_ENDPOINT" value="http://localhost:4318" />
       <env name="REDIS_URL" value="http://localhost:1111" />
     </envs>
     <kind value="PACKAGE" />

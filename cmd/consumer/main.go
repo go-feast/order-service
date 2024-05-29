@@ -7,6 +7,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-feast/topics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
@@ -15,8 +16,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"service/api/pubsub/handlers/order"
 	"service/closer"
 	"service/config"
+	"service/eserializer"
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
@@ -141,7 +144,19 @@ func RegisterMetricRoute(r chi.Router) {
 	r.Get("/healthz", mw.Healthz)
 }
 
-func RegisterConsumerHandlers(_ *message.Router, subscriber message.Subscriber, publisher message.Publisher) []io.Closer {
+func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, publisher message.Publisher) []io.Closer {
+	handler := order.NewHandler(
+		logging.New(),
+		eserializer.JSONSerializer{},
+	)
+
+	r.AddNoPublisherHandler(
+		"handler.order.paid",
+		topics.OrderCreated.String(),
+		subscriber,
+		handler.OrderCreated,
+	)
+
 	return []io.Closer{
 		subscriber,
 		publisher,

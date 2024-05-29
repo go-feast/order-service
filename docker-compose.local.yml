@@ -13,15 +13,14 @@ x-service-volume:  &service-volume
 
 services:
   service-consumer:
-
+    depends_on:
+      - kafka
+      - jaeger
+    env_file:
+      - dev.env
     environment:
-      ENVIRONMENT: production
       METRICS_HOST: service-consumer
-      METRICS_PORT: 8082
-      DB_URL: db
-      REDIS_URL: redis
-      KAFKA_URL: kafka:9092
-      OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
+      METRICS_PORT: 8083
     build:
       dockerfile: Dockerfile
       context: ./
@@ -42,24 +41,26 @@ services:
     ports:
       - "8083:8083" # metric server port. Make sure u change it in deployment/development/external/prometheus.yml
     healthcheck:
-      test: ["CMD", "curl", "service-consumer:8083/healthz"]
+      test: ["CMD", "curl", "service-consumer:8082/healthz"]
       retries: 5
       timeout: 10s
+    networks:
+      - api
 
   service:
+    depends_on:
+      - kafka
+      - jaeger
+    env_file:
+      - dev.env
     environment:
-        ENVIRONMENT: production
-        SERVER_HOST: service
-        SERVER_PORT: 8080
-        METRICS_HOST: service
-        METRICS_PORT: 8081
-        DB_URL: db # to change
-        REDIS_URL: redis # to change
-        KAFKA_URL: kafka:9092
-        OTEL_EXPORTER_OTLP_TRACE_ENDPOINT: jaeger:4318
-        SERVER_WRITETIMEOUT: 10s
-        SERVER_READTIMEOUT: 5s
-        SERVER_IDLETIMEOUT: 5s
+      SERVER_HOST: service
+      SERVER_PORT: 8080
+      METRICS_HOST: service
+      METRICS_PORT: 8081
+      SERVER_WRITETIMEOUT: 10s
+      SERVER_READTIMEOUT: 5s
+      SERVER_IDLETIMEOUT: 5s
     build:
       dockerfile: Dockerfile
       context: ./
@@ -85,6 +86,8 @@ services:
       test: ["CMD", "curl", "service:8080/healthz" ]
       interval: 5s
       retries: 10
+    networks:
+      - api
 
   prometheus:
     depends_on:
@@ -96,17 +99,20 @@ services:
       - ./deployment/development/external/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
   jaeger:
+    hostname: jaeger
     image: jaegertracing/all-in-one:1.52
     environment:
-        COLLECTOR_OTLP_ENABLED: true
+      COLLECTOR_OTLP_ENABLED: true
     ports:
       - "16686:16686" # serve frontend
+      - "14269:14269" # healthcheck
       - "4318:4318" # accept OpenTelemetry Protocol (OTLP) over HTTP
-      - "4317:4317" # accept OpenTelemetry Protocol (OTLP) over gRPC
+    healthcheck:
+      test: ["CMD", "curl", "jaeger:14269/"]
+      timeout: 10s
+      retries: 5
     networks:
       - api
-    depends_on:
-      - service
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.1
@@ -115,6 +121,8 @@ services:
       driver: none
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - api
 
   kafka:
     image: confluentinc/cp-kafka:7.3.1
@@ -128,3 +136,5 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - api

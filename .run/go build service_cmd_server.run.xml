@@ -1,20 +1,20 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="go build service/cmd/server" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
-    <module name="resty-service-template" />
+    <module name="order-service" />
     <working_directory value="$PROJECT_DIR$" />
     <envs>
-      <env name="ENVIRONMENT" value="local" />
       <env name="CONSUMER_HOST" value="9080" />
       <env name="CONSUMER_PORT" value="9080" />
-      <env name="SERVER_HOST" value="localhost" />
-      <env name="SERVER_PORT" value="8080" />
+      <env name="DB_URL" value="localhost:5432" />
+      <env name="ENVIRONMENT" value="local" />
+      <env name="KAFKA_URL" value="http://localhost:1111" />
       <env name="METRICS_HOST" value="localhost" />
       <env name="METRICS_PORT" value="8081" />
-      <env name="OTEL_EXPORTER_OTLP_TRACE_ENDPOINT" value="http://localhost:4318" />
-      <env name="DB_URL" value="localhost:5432" />
-      <env name="KAFKA_URL" value="http://localhost:1111" />
+      <env name="OTEL_EXPORTER_OTLP_ENDPOINT" value="jaeger:4318" />
       <env name="REDIS_URL" value="http://localhost:1111" />
+      <env name="SERVER_HOST" value="localhost" />
       <env name="SERVER_IDLETIMEOUT" value="5s" />
+      <env name="SERVER_PORT" value="8080" />
       <env name="SERVER_READTIMEOUT" value="5s" />
       <env name="SERVER_WRITETIMEOUT" value="10s" />
     </envs>

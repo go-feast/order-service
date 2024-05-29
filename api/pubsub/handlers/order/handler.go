@@ -1,10 +1,15 @@
 package order
 
-import "github.com/ThreeDotsLabs/watermill/message"
+import (
+	"github.com/rs/zerolog"
+	"service/eserializer"
+)
 
 type Handler struct {
+	logger       *zerolog.Logger
+	deserializer eserializer.EventSerializer
 }
 
-func (h *Handler) OrderCreated(_ *message.Message) ([]*message.Message, error) {
-	return nil, nil
+func NewHandler(logger *zerolog.Logger, deserializer eserializer.EventSerializer) *Handler {
+	return &Handler{logger: logger, deserializer: deserializer}
 }

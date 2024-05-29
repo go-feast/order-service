@@ -34,3 +34,9 @@ type JSONEventOrderCreated struct {
 	Meals        []string                    `json:"meals"`
 	Destination  destination.JSONDestination `json:"destination"`
 }
+
+type JSONEventOrderPaid struct {
+	eserializer.Event
+	OrderID       string `json:"order_id"`
+	TransactionID string `json:"transaction_id"`
+}

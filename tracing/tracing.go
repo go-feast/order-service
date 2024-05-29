@@ -48,7 +48,7 @@ func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 		return stdouttrace.New(stdouttrace.WithWriter(os.Stdout), stdouttrace.WithPrettyPrint())
 	case config.Development, config.Local, config.Production:
 		// OTEL_EXPORTER_OTLP_TRACES_ENDPOINT MUST be set
-		traceExporter, err := otlptracehttp.New(ctx, otlptracehttp.WithInsecure()) // HTTPS -> HTTP
+		traceExporter, err := otlptracehttp.New(ctx) // OTEL_EXPORTER_OTLP_TRACES_ENDPOINT should take precedence
 		if err != nil {
 			return nil, err
 		}

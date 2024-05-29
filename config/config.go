@@ -23,17 +23,12 @@ type ServerConfig interface {
 	ReadHeaderTimeoutDur() time.Duration
 }
 
-type OTEL struct {
-	TraceEndpoint string `env:"OTLP_TRACE_ENDPOINT"`
-}
-
 type ServiceConfig struct {
 	DB           *DBConfig                `env:", prefix=DB_"`
 	Redis        *RedisConfig             `env:", prefix=REDIS_"`
 	Kafka        *KafkaConfig             `env:", prefix=KAFKA_"`
 	Server       *MainServiceServerConfig `env:", prefix=SERVER_"`
 	MetricServer *MetricServerConfig      `env:", prefix=METRICS_"`
-	OTEL         *OTEL                    `env:", prefix=OTEL_EXPORTER_"`
 	Environment  Environment              `env:"ENVIRONMENT,required"`
 }
 
@@ -42,7 +37,6 @@ type ConsumerConfig struct {
 	Redis        *RedisConfig        `env:", prefix=REDIS_"`
 	Kafka        *KafkaConfig        `env:", prefix=KAFKA_"`
 	MetricServer *MetricServerConfig `env:", prefix=METRICS_"`
-	OTEL         *OTEL               `env:", prefix=OTEL_EXPORTER_"`
 	Environment  Environment         `env:"ENVIRONMENT,required"`
 }
 

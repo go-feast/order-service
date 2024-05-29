@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"service/api/http/handlers/order"
 	"service/closer"
 	"service/config"
+	"service/eserializer"
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
@@ -116,12 +118,16 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(r chi.Router, _ message.Publisher) []io.Closer { //nolint:unparam
+func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []io.Closer { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
 
-	handler := order.NewHandler()
+	handler := order.NewHandler(
+		otel.GetTracerProvider().Tracer(serviceName),
+		pub,
+		eserializer.JSONSerializer{},
+	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
 		Route("/api/v1", func(r chi.Router) {

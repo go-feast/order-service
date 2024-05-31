@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-feast/topics"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"io"
@@ -23,6 +24,7 @@ import (
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
+	"service/pubsub"
 	serv "service/server"
 	"service/tracing"
 )
@@ -91,12 +93,16 @@ func main() {
 
 	Closer.AppendClosers(router)
 
+	saramaTracer := kafka.NewOTELSaramaTracer()
+
 	subscriber, err := kafka.NewSubscriber(
 		kafka.SubscriberConfig{
 			Brokers:               c.Kafka.KafkaURL,
 			Unmarshaler:           kafka.DefaultMarshaler{},
 			OverwriteSaramaConfig: saramaSubscriberConfig,
-			ConsumerGroup:         "test_consumer_group",
+			//FIXME: change consumer group
+			ConsumerGroup: "test_consumer_group",
+			Tracer:        saramaTracer,
 		},
 		pubSubLogger,
 	)
@@ -107,7 +113,8 @@ func main() {
 	publisher, err := kafka.NewPublisher(
 		kafka.PublisherConfig{
 			Brokers:   c.Kafka.KafkaURL,
-			Marshaler: kafka.DefaultMarshaler{},
+			Marshaler: pubsub.OTELMarshaler{},
+			Tracer:    saramaTracer,
 		},
 		pubSubLogger,
 	)
@@ -148,6 +155,7 @@ func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, 
 	handler := order.NewHandler(
 		logging.New(),
 		eserializer.JSONSerializer{},
+		otel.GetTracerProvider().Tracer(serviceName),
 	)
 
 	r.AddNoPublisherHandler(

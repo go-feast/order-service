@@ -27,7 +27,7 @@ type TakeOrderResponse struct { //nolint:govet
 
 func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		_, span = h.tracer.Start(r.Context(), "take order")
+		ctx, span = h.tracer.Start(r.Context(), "take order")
 	)
 
 	defer span.End()
@@ -39,6 +39,8 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	span.AddEvent("parsed TakeOrderRequest")
 
 	o, err := order.NewOrder(
 		takeOrder.RestaurantID,
@@ -52,6 +54,8 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	span.AddEvent("created order")
+
 	JSONOrder := o.ToEvent().ToJSON()
 
 	bytes, err := h.serializer.Serialize(JSONOrder)
@@ -61,6 +65,8 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := message.NewMessage(uuid.NewString(), bytes)
+
+	msg.SetContext(ctx)
 
 	err = h.publisher.Publish(topics.OrderCreated.String(), msg)
 	if err != nil {

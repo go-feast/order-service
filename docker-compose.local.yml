@@ -42,8 +42,8 @@ services:
       - "8083:8083" # metric server port. Make sure u change it in deployment/development/external/prometheus.yml
     healthcheck:
       test: ["CMD", "curl", "service-consumer:8082/healthz"]
-      retries: 5
-      timeout: 10s
+      retries: 10
+      interval: 5s
     networks:
       - api
 

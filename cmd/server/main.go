@@ -23,6 +23,7 @@ import (
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
+	"service/pubsub"
 	serv "service/server"
 	"service/tracing"
 )
@@ -60,7 +61,8 @@ func main() {
 	publisher, err := kafka.NewPublisher(
 		kafka.PublisherConfig{
 			Brokers:   c.Kafka.KafkaURL,
-			Marshaler: kafka.DefaultMarshaler{},
+			Marshaler: pubsub.OTELMarshaler{},
+			Tracer:    kafka.NewOTELSaramaTracer(),
 		},
 		pubSubLogger,
 	)

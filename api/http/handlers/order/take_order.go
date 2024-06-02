@@ -58,7 +58,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	JSONOrder := o.ToEvent().ToJSON()
 
-	bytes, err := h.serializer.Serialize(JSONOrder)
+	bytes, err := h.marshaler.Marshal(JSONOrder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

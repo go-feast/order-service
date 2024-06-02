@@ -3,15 +3,15 @@ package order
 import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel/trace"
-	"service/eserializer"
+	"service/event"
 )
 
 type Handler struct {
-	logger       *zerolog.Logger
-	deserializer eserializer.EventSerializer
-	tracer       trace.Tracer
+	logger      *zerolog.Logger
+	unmarshaler event.Unmarshaler
+	tracer      trace.Tracer
 }
 
-func NewHandler(logger *zerolog.Logger, deserializer eserializer.EventSerializer, tracer trace.Tracer) *Handler {
-	return &Handler{logger: logger, deserializer: deserializer, tracer: tracer}
+func NewHandler(logger *zerolog.Logger, unmarshaler event.Unmarshaler, tracer trace.Tracer) *Handler {
+	return &Handler{logger: logger, unmarshaler: unmarshaler, tracer: tracer}
 }

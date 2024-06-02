@@ -3,7 +3,7 @@ package order
 import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel/trace"
-	"service/eserializer"
+	"service/event"
 )
 
 type Handler struct {
@@ -11,7 +11,7 @@ type Handler struct {
 
 	publisher message.Publisher
 
-	serializer eserializer.EventSerializer
+	marshaler event.Marshaler
 
 	// metrics
 
@@ -21,11 +21,11 @@ type Handler struct {
 func NewHandler(
 	tracer trace.Tracer,
 	publisher message.Publisher,
-	serializer eserializer.EventSerializer,
+	marshaler event.Marshaler,
 ) *Handler {
 	return &Handler{
-		tracer:     tracer,
-		publisher:  publisher,
-		serializer: serializer,
+		tracer:    tracer,
+		publisher: publisher,
+		marshaler: marshaler,
 	}
 }

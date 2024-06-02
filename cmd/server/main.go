@@ -19,7 +19,7 @@ import (
 	"service/api/http/handlers/order"
 	"service/closer"
 	"service/config"
-	"service/eserializer"
+	"service/event"
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
@@ -128,7 +128,7 @@ func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []io.Closer 
 	handler := order.NewHandler(
 		otel.GetTracerProvider().Tracer(serviceName),
 		pub,
-		eserializer.JSONSerializer{},
+		event.JSONMarshaler{},
 	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).

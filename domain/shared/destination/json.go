@@ -1,9 +1,9 @@
 package destination
 
-import "service/eserializer"
+import "service/event"
 
 type JSONDestination struct {
-	eserializer.Event
+	event.Event
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }

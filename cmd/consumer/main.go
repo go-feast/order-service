@@ -20,7 +20,7 @@ import (
 	"service/api/pubsub/handlers/order"
 	"service/closer"
 	"service/config"
-	"service/eserializer"
+	"service/event"
 	mw "service/http/middleware"
 	"service/logging"
 	"service/metrics"
@@ -154,7 +154,7 @@ func RegisterMetricRoute(r chi.Router) {
 func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, publisher message.Publisher) []io.Closer {
 	handler := order.NewHandler(
 		logging.New(),
-		eserializer.JSONSerializer{},
+		event.JSONMarshaler{},
 		otel.GetTracerProvider().Tracer(serviceName),
 	)
 

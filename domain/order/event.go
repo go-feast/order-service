@@ -2,7 +2,7 @@ package order
 
 import (
 	"service/domain/shared/destination"
-	"service/eserializer"
+	"service/event"
 )
 
 // EventType provides methods for converting Order for different marshaling strategies.
@@ -27,7 +27,7 @@ func (t *EventType) ToJSON() JSONEventOrderCreated {
 
 // JSONEventOrderCreated provides JSON representation of Order.
 type JSONEventOrderCreated struct {
-	eserializer.Event
+	event.Event
 	OrderID      string                      `json:"order_id"`
 	CustomerID   string                      `json:"customer_id"`
 	RestaurantID string                      `json:"restaurant_id"`
@@ -36,7 +36,7 @@ type JSONEventOrderCreated struct {
 }
 
 type JSONEventOrderPaid struct {
-	eserializer.Event
+	event.Event
 	OrderID       string `json:"order_id"`
 	TransactionID string `json:"transaction_id"`
 }

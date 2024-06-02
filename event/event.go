@@ -1,4 +1,4 @@
-package eserializer
+package event
 
 import "errors"
 
@@ -8,12 +8,26 @@ import "errors"
 // Example:
 //
 //	type SomeEvent struct {
-//	     eserializer.Event
+//	     event.Event
 //	     SomeID uuid.UUID `json:"some-id"`
 //	     ...
 //	}
 type Event interface {
 	event()
+}
+
+// Marshaler provide methods for serializing/deserializing Event structs.
+type Marshaler interface {
+	Marshal(Event) ([]byte, error)
+}
+
+type Unmarshaler interface {
+	Unmarshal([]byte, Event) error
+}
+
+type MarshalUnmarshaler interface {
+	Marshaler
+	Unmarshaler
 }
 
 var ErrEventCantBeNil = errors.New("event cant be nil")

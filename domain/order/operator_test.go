@@ -136,7 +136,7 @@ func TestStateOperator_trySetState(t *testing.T) {
 
 			operator.o.state = tc.operatorState
 
-			_, canceled, err := operator.trySetState(tc.replacingState)
+			canceled, err := operator.trySetState(tc.replacingState)
 			if tc.wantErr {
 				assert.ErrorIs(t, err, tc.expectedErr)
 			} else {
@@ -157,7 +157,7 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		operatorState  State
 		replacingState State
 
-		changingStateFunc func() (*Order, bool, error)
+		changingStateFunc func() (bool, error)
 
 		wantErr bool
 
@@ -250,7 +250,7 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			operator.o.state = tc.operatorState
 
-			_, setted, err := tc.changingStateFunc()
+			setted, err := tc.changingStateFunc()
 			if tc.wantErr {
 				assert.ErrorIs(t, err, tc.expectedErr)
 			} else {
@@ -278,10 +278,8 @@ func TestStateOperator_FromAnyStateToCanceled(t *testing.T) {
 	for _, state := range states {
 		operator.o.state = state
 
-		order, canceled, err := operator.CancelOrder()
+		canceled, err := operator.CancelOrder()
 
-		assert.NotNil(t, order)
-		assert.True(t, order.Is(Canceled))
 		assert.True(t, canceled)
 		assert.NoError(t, err)
 	}
@@ -303,10 +301,8 @@ func TestStateOperator_FromAnyStateToClosed(t *testing.T) {
 	for _, state := range states {
 		operator.o.state = state
 
-		order, canceled, err := operator.CloseOrder()
+		canceled, err := operator.CloseOrder()
 
-		assert.NotNil(t, order)
-		assert.True(t, order.Is(Closed))
 		assert.True(t, canceled)
 		assert.NoError(t, err)
 	}

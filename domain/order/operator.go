@@ -16,63 +16,63 @@ func NewStateOperator(o *Order) *StateOperator {
 // CancelOrder set orders`s state to [Canceled].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) CancelOrder() (*Order, bool, error) {
+func (s *StateOperator) CancelOrder() (bool, error) {
 	return s.trySetState(Canceled)
 }
 
 // CloseOrder set orders`s state to [Closed].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns a nil error.
-func (s *StateOperator) CloseOrder() (*Order, bool, error) {
+func (s *StateOperator) CloseOrder() (bool, error) {
 	return s.trySetState(Closed)
 }
 
 // PayOrder set orders`s state to [Paid].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) PayOrder() (*Order, bool, error) {
+func (s *StateOperator) PayOrder() (bool, error) {
 	return s.trySetState(Paid)
 }
 
 // CookOrder set orders`s state to [Cooking].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) CookOrder() (*Order, bool, error) {
+func (s *StateOperator) CookOrder() (bool, error) {
 	return s.trySetState(Cooking)
 }
 
 // OrderFinished set orders`s state to [Finished].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) OrderFinished() (*Order, bool, error) {
+func (s *StateOperator) OrderFinished() (bool, error) {
 	return s.trySetState(Finished)
 }
 
 // WaitForCourier set orders`s state to [WaitingForCourier].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) WaitForCourier() (*Order, bool, error) {
+func (s *StateOperator) WaitForCourier() (bool, error) {
 	return s.trySetState(WaitingForCourier)
 }
 
 // CourierTookOrder set orders`s state to [CourierTook].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) CourierTookOrder() (*Order, bool, error) {
+func (s *StateOperator) CourierTookOrder() (bool, error) {
 	return s.trySetState(CourierTook)
 }
 
 // DeliveringOrder set orders`s state to [Delivering].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) DeliveringOrder() (*Order, bool, error) {
+func (s *StateOperator) DeliveringOrder() (bool, error) {
 	return s.trySetState(Delivering)
 }
 
 // OrderDelivered set orders`s state to [Delivered].
 // If order is already setted, it returns the order with setted flag set to true.
 // If order is closed, it returns an error.
-func (s *StateOperator) OrderDelivered() (*Order, bool, error) {
+func (s *StateOperator) OrderDelivered() (bool, error) {
 	return s.trySetState(Delivered)
 }
 
@@ -82,33 +82,33 @@ func (s *StateOperator) OrderDelivered() (*Order, bool, error) {
 // If next state is [Canceled] or [Closed] it sets it immediately.
 // Otherwise, it checks if the next state is the same as the current order state.
 // If it is, it sets the next state.
-func (s *StateOperator) trySetState(next State) (*Order, bool, error) {
+func (s *StateOperator) trySetState(next State) (bool, error) {
 	orderState := s.o.state
 
 	if orderState == next {
-		return s.o, true, nil
+		return true, nil
 	}
 
 	if s.o.Is(Closed) {
-		return nil, false, errors.Wrapf(ErrOrderClosed, "cannot set state: %s", next.Name)
+		return false, errors.Wrapf(ErrOrderClosed, "cannot set state: %s", next.Name)
 	}
 
 	if s.o.Is(Canceled) {
-		return s.o, false, errors.Wrapf(ErrOrderCanceled, "cannot set state: %s", next.Name)
+		return false, errors.Wrapf(ErrOrderCanceled, "cannot set state: %s", next.Name)
 	}
 
 	if next == Canceled || next == Closed {
 		s.setState(next)
-		return s.o, true, nil
+		return true, nil
 	}
 
 	if orderState.Next.Name != next.Name {
-		return nil, false, errors.Wrapf(ErrInvalidState, "cannot set state %#v", next)
+		return false, errors.Wrapf(ErrInvalidState, "cannot set state %#v", next)
 	}
 
 	s.nextState()
 
-	return s.o, true, nil
+	return true, nil
 }
 
 // nextState sets order`s state to the next

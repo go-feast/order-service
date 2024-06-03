@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"net/http"
 	"service/domain/order"
+	"service/http/httpstatus"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	err := render.DecodeJSON(r.Body, takeOrder)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpstatus.BadRequest(w, err)
 		return
 	}
 
@@ -50,7 +51,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		takeOrder.Destination.Longitude,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpstatus.BadRequest(w, err)
 		return
 	}
 
@@ -60,7 +61,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := h.marshaler.Marshal(JSONOrder)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpstatus.InternalServerError(w, err)
 		return
 	}
 
@@ -70,7 +71,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	err = h.publisher.Publish(topics.OrderCreated.String(), msg)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpstatus.InternalServerError(w, err)
 		return
 	}
 
@@ -79,5 +80,5 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		Timestamp: o.CreateAt(),
 	}
 
-	render.JSON(w, r, response)
+	httpstatus.Created(w, response)
 }

@@ -16,7 +16,7 @@ func (s State) String() string { return s.Name }
 // Every State can go into Canceled State. But the only way where Canceled can go into is Closed.
 // Canceled -> Closed.
 var (
-	Canceled = State{"order.setted", &Closed}
+	Canceled = State{"order.canceled", &Closed}
 
 	Created = State{"order.created", &Paid}
 

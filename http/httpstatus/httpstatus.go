@@ -46,16 +46,16 @@ func formatErrorResponse(ctx context.Context, w http.ResponseWriter, err error, 
 		details = append(details, detail{Message: err.Error()})
 	}
 
-	apierr := apierror{
+	err = apierror{
 		Status: http.StatusText(status),
 		Errors: details,
 	}
 
-	span.RecordError(apierr)
+	span.RecordError(err)
 
-	span.SetStatus(codes.Error, apierr.Error())
+	span.SetStatus(codes.Error, err.Error())
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	http.Error(w, err.Error(), status)
 }
 

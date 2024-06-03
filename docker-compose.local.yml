@@ -16,7 +16,7 @@ services:
     environment:
       ENVIRONMENT: production
       METRICS_HOST: service-consumer
-      METRICS_PORT: 8082
+      METRICS_PORT: 8081
       DB_URL: db
       REDIS_URL: redis
       KAFKA_URL: kafka:9092
@@ -24,7 +24,10 @@ services:
     build:
       dockerfile: Dockerfile
       context: ./
-      target: dev_consumer
+      target: production
+      args:
+        build: api-consumer
+        metrics_port: 8081
     restart: on-failure
     volumes:
       - *service-volume
@@ -37,7 +40,7 @@ services:
       - "-build=/go/bin/task build-api-consumer"
       - "-command=/app/bin/api-consumer"
     ports:
-      - "8083:8083" # metric server port
+      - "8083:8081" # metric server port
 
   service:
     environment:
@@ -56,7 +59,11 @@ services:
     build:
       dockerfile: Dockerfile
       context: ./
-      target: dev_service
+      target: production
+      args:
+        build: api-service
+        service_port: 8080
+        metrics_port: 8081
     restart: on-failure
     volumes:
       - *service-volume

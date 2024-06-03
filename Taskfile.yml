@@ -26,17 +26,27 @@ tasks:
   test:
     desc: Run tests
     cmds:
-      - ENVIRONMENT=testing go test -gcflags=-l -covermode=atomic -race ./...
+      - go test -gcflags=-l -covermode=atomic -race ./...
+    env:
+      ENVIRONMENT: testing
 
   build-api-server:
     desc: Build service
     cmds:
-      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
+      - go build -buildvcs=false -ldflags="-s -w" -o bin/api-server ./cmd/server/main.go
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: amd64
 
   build-api-consumer:
     desc: Build service
     cmds:
-      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -ldflags="-s -w" -o bin/api-consumer ./cmd/consumer/main.go
+      - go build -buildvcs=false -ldflags="-s -w" -o bin/api-consumer ./cmd/consumer/main.go
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      GOARCH: amd64
 
   local-build:
     desc: Docker compose up prometheus with our app

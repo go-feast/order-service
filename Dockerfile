@@ -5,8 +5,7 @@ MAINTAINER go-feast
 WORKDIR /app
 
 ARG service_port
-ARG metric_port_service
-ARG metric_port_consumer
+ARG metrics_port
 
 RUN --mount=type=cache,target=/var/cache/apt\
     apk update && \
@@ -16,6 +15,15 @@ RUN --mount=type=cache,target=/var/cache/apt\
 RUN --mount=type=cache,target=/var/cache/go/bin\
     go install github.com/go-task/task/v3/cmd/task@latest
 
+FROM builder as local
+
+RUN --mount=type=cache,target=/var/cache/go/bin\
+    go install github.com/githubnemo/CompileDaemon@latest \
+
+FROM builder as production_build
+
+ARG build
+
 # Copy go.mod and go.sum files to download dependencies
 COPY go.mod go.sum ./
 
@@ -23,62 +31,23 @@ COPY go.mod go.sum ./
 RUN  --mount=type=cache,target=/var/cache/go/pkg/mod\
      go mod download
 
-FROM builder as local
-
-RUN --mount=type=cache,target=/var/cache/go/bin\
-    go install github.com/githubnemo/CompileDaemon@latest
-
-FROM local as dev_service
-
-ARG service_port
-ARG metric_port_service
-
-EXPOSE ${service_port}
-EXPOSE ${metric_port_service}
-
-FROM local as dev_consumer
-
-ARG metric_port_consumer
-
-EXPOSE ${metric_port_consumer}
-
-FROM builder as service_builder
-
 # Copy the rest of the application source code
 COPY . .
 
-RUN /go/bin/task build-api-server
+RUN /go/bin/task ${build}
 
-FROM alpine:latest as prod_service
+FROM alpine:latest as production
 
 WORKDIR /app
 
+ARG build
 ARG service_port
-ARG service_metrics_port
+ARG metrics_port
 
-COPY --from=service_builder /app/bin/api-server .
+COPY --from=production_build /app/bin/${build} .
 
 
 EXPOSE ${service_port}
-EXPOSE ${service_metrics_port}
+EXPOSE ${metrics_port}
 
-CMD ["./api-server"]
-
-FROM builder as consumer_builder
-
-# Copy the rest of the application source code
-COPY . .
-
-RUN /go/bin/task build-api-consumer
-
-FROM alpine:latest as prod_consumer
-
-WORKDIR /app
-
-ARG consumer_metrics_port
-
-COPY --from=consumer_builder /app/bin/api-consumer .
-
-EXPOSE ${consumer_metrics_port}
-
-CMD ["./api-consumer"]
+CMD ["./${build}"]

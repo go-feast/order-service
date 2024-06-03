@@ -43,6 +43,7 @@ func formatErrorResponse(w http.ResponseWriter, err error, status int) {
 
 	bytes, _ := Marshaler(apierr)
 
+	w.Header().Set("Content-Type", "application/json")
 	http.Error(w, string(bytes), status)
 }
 
@@ -53,6 +54,7 @@ func formatSuccessfulResponse(w http.ResponseWriter, i interface{}, status int) 
 	}
 
 	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(bytes)
 }
 

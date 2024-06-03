@@ -37,7 +37,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	err := render.DecodeJSON(r.Body, takeOrder)
 	if err != nil {
-		httpstatus.BadRequest(w, err)
+		httpstatus.BadRequest(ctx, w, err)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		takeOrder.Destination.Longitude,
 	)
 	if err != nil {
-		httpstatus.BadRequest(w, err)
+		httpstatus.BadRequest(ctx, w, err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	bytes, err := h.marshaler.Marshal(JSONOrder)
 	if err != nil {
-		httpstatus.InternalServerError(w, err)
+		httpstatus.InternalServerError(ctx, w, err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	err = h.publisher.Publish(topics.OrderCreated.String(), msg)
 	if err != nil {
-		httpstatus.InternalServerError(w, err)
+		httpstatus.InternalServerError(ctx, w, err)
 		return
 	}
 

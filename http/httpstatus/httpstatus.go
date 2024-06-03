@@ -1,9 +1,12 @@
 package httpstatus
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/hashicorp/go-multierror"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 )
 
@@ -14,14 +17,21 @@ type apierror struct {
 	Errors []detail `json:"errors"`
 }
 
+func (a apierror) Error() string {
+	bytes, _ := Marshaler(a)
+	return string(bytes)
+}
+
 type detail struct {
 	Message string `json:"message"`
 }
 
-func formatErrorResponse(w http.ResponseWriter, err error, status int) {
+func formatErrorResponse(ctx context.Context, w http.ResponseWriter, err error, status int) {
 	if err == nil {
 		panic("http api: error shouldn`t be nil")
 	}
+
+	span := trace.SpanFromContext(ctx)
 
 	details := make([]detail, 0)
 
@@ -41,10 +51,12 @@ func formatErrorResponse(w http.ResponseWriter, err error, status int) {
 		Errors: details,
 	}
 
-	bytes, _ := Marshaler(apierr)
+	span.RecordError(apierr)
+
+	span.SetStatus(codes.Error, apierr.Error())
 
 	w.Header().Set("Content-Type", "application/json")
-	http.Error(w, string(bytes), status)
+	http.Error(w, err.Error(), status)
 }
 
 func formatSuccessfulResponse(w http.ResponseWriter, i interface{}, status int) {
@@ -70,12 +82,12 @@ func Created(w http.ResponseWriter, i interface{}) {
 
 /////////// 400 ///////////
 
-func BadRequest(w http.ResponseWriter, err error) {
-	formatErrorResponse(w, err, http.StatusBadRequest)
+func BadRequest(ctx context.Context, w http.ResponseWriter, err error) {
+	formatErrorResponse(ctx, w, err, http.StatusBadRequest)
 }
 
 /////////// 500 ///////////
 
-func InternalServerError(w http.ResponseWriter, err error) {
-	formatErrorResponse(w, err, http.StatusInternalServerError)
+func InternalServerError(ctx context.Context, w http.ResponseWriter, err error) {
+	formatErrorResponse(ctx, w, err, http.StatusInternalServerError)
 }

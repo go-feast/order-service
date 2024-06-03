@@ -3,6 +3,7 @@ package order
 
 import (
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"service/domain/shared/destination"
 	"time"
@@ -84,30 +85,34 @@ func NewOrder(
 	mealsIDs []string,
 	latitude, longitude float64,
 ) (*Order, error) {
-	errs := make([]error, 0)
+	var errs error
 
 	rid, err := uuid.Parse(restaurantID)
 	if err != nil {
-		errs = append(errs, errors.WithMessage(err, "cannot parse restaurant id"))
+		errs = multierror.Append(errs,
+			errors.WithMessage(err, "cannot parse restaurant id"))
 	}
 
 	uid, err := uuid.Parse(userID)
 	if err != nil {
-		errs = append(errs, errors.WithMessage(err, "cannot parse user id"))
+		errs = multierror.Append(errs,
+			errors.WithMessage(err, "cannot parse user id"))
 	}
 
 	meals, err := mealsID(mealsIDs)
 	if err != nil {
-		errs = append(errs, errors.WithMessage(err, "cannot parse meals` id"))
+		errs = multierror.Append(errs,
+			errors.WithMessage(err, "cannot parse meals` id"))
 	}
 
 	deliverTo, err := destination.NewDestination(latitude, longitude)
 	if err != nil {
-		errs = append(errs, errors.WithMessage(err, "cannot resolve destination"))
+		errs = multierror.Append(errs,
+			errors.WithMessage(err, "cannot resolve destination"))
 	}
 
-	if len(errs) != 0 {
-		return nil, NewMultipleErrors("failed order validation", errs)
+	if errs != nil {
+		return nil, errs
 	}
 
 	return &Order{
@@ -142,7 +147,7 @@ func mealsID(ids []string) (uuid.UUIDs, error) {
 	}
 
 	if len(errs) != 0 {
-		return nil, NewMultipleErrors("meals id error", errs)
+		return nil, multierror.Append(nil, errs...)
 	}
 
 	return mealIDs, nil

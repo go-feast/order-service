@@ -22,7 +22,7 @@ type Order struct { //nolint:govet
 	customerID uuid.UUID
 
 	// courierID states for courier [uuid].
-	courierID uuid.UUID //nolint:unused
+	courierID uuid.UUID
 
 	// meals states for meals` [uuid] that user selected in a specific restaurant.
 	meals uuid.UUIDs

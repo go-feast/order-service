@@ -8,11 +8,12 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-feast/topics"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -91,7 +92,7 @@ func main() {
 		logger.Panic().Err(err).Msg("failed to create message router")
 	}
 
-	Closer.AppendClosers(router)
+	Closer.AppendClosers(closer.C{Name: "router", Closer: router})
 
 	saramaTracer := kafka.NewOTELSaramaTracer()
 
@@ -100,9 +101,8 @@ func main() {
 			Brokers:               c.Kafka.KafkaURL,
 			Unmarshaler:           kafka.DefaultMarshaler{},
 			OverwriteSaramaConfig: saramaSubscriberConfig,
-			//FIXME: change consumer group
-			ConsumerGroup: "test_consumer_group",
-			Tracer:        saramaTracer,
+			ConsumerGroup:         "test_consumer_group",
+			Tracer:                saramaTracer,
 		},
 		pubSubLogger,
 	)
@@ -122,7 +122,17 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
 	}
 
-	closers := RegisterConsumerHandlers(router, subscriber, publisher)
+	driverName := "pgx/v5"
+
+	db, err := sqlx.Open(driverName, c.DB.DSN())
+	if err != nil {
+		logger.Fatal().Err(err).
+			Str("dsn", c.DB.DSN()).
+			Str("driver", driverName).
+			Msg("failed to connect to database")
+	}
+
+	closers := RegisterConsumerHandlers(router, subscriber, publisher, db)
 
 	Closer.AppendClosers(closers...)
 
@@ -151,7 +161,7 @@ func RegisterMetricRoute(r chi.Router) {
 	r.Get("/healthz", mw.Healthz)
 }
 
-func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, publisher message.Publisher) []io.Closer {
+func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, publisher message.Publisher, db *sqlx.DB) []closer.C {
 	handler := order.NewHandler(
 		logging.New(),
 		event.JSONMarshaler{},
@@ -165,8 +175,9 @@ func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, 
 		handler.OrderCreated,
 	)
 
-	return []io.Closer{
-		subscriber,
-		publisher,
+	return []closer.C{
+		{Name: "subscriber", Closer: subscriber},
+		{Name: "publisher", Closer: publisher},
+		{Name: "database connection", Closer: db},
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -120,7 +119,7 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []io.Closer { //nolint:unparam
+func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []closer.C { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
@@ -138,7 +137,9 @@ func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []io.Closer 
 			})
 		})
 
-	return nil
+	return []closer.C{
+		{Name: "pub", Closer: pub},
+	}
 }
 
 func RegisterMetricRoute(r chi.Router) {

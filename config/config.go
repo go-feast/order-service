@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"github.com/sethvargo/go-envconfig"
 	"net"
 	"time"
@@ -24,7 +25,7 @@ type ServerConfig interface {
 }
 
 type ServiceConfig struct {
-	DB           *DBConfig                `env:", prefix=DB_"`
+	DB           *DBConfig                `env:", prefix=POSTGRES_"`
 	Redis        *RedisConfig             `env:", prefix=REDIS_"`
 	Kafka        *KafkaConfig             `env:", prefix=KAFKA_"`
 	Server       *MainServiceServerConfig `env:", prefix=SERVER_"`
@@ -33,7 +34,7 @@ type ServiceConfig struct {
 }
 
 type ConsumerConfig struct {
-	DB           *DBConfig           `env:", prefix=DB_"`
+	DB           *DBConfig           `env:", prefix=POSTGRES_"`
 	Redis        *RedisConfig        `env:", prefix=REDIS_"`
 	Kafka        *KafkaConfig        `env:", prefix=KAFKA_"`
 	MetricServer *MetricServerConfig `env:", prefix=METRICS_"`
@@ -97,8 +98,19 @@ func (m *MetricServerConfig) ReadHeaderTimeoutDur() time.Duration {
 }
 
 type DBConfig struct { //nolint:govet
-	DBURL string `env:"URL,required"`
+	HOST     string `env:"HOST,required"`
+	USER     string `env:"USER,required"`
+	PASSWORD string `env:"PASSWORD,required"`
+	DB       string `env:"DB,required"`
+	SSL      string `env:"SSL,required"`
 }
+
+// DSN example: "postgres://username:password@localhost:5432/database_name?sslmode=disable"
+func (c *DBConfig) DSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+		c.USER, c.PASSWORD, c.HOST, c.DB, c.SSL)
+}
+
 type KafkaConfig struct { //nolint:govet
 	KafkaURL []string `env:"URL,required"`
 }

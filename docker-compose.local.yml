@@ -16,6 +16,8 @@ services:
     depends_on:
       - kafka
       - jaeger
+      - prometheus
+      - postgres
     env_file:
       - dev.env
     environment:
@@ -41,7 +43,7 @@ services:
     ports:
       - "8083:8083" # metric server port. Make sure u change it in deployment/development/external/prometheus.yml
     healthcheck:
-      test: ["CMD", "curl", "service-consumer:8082/healthz"]
+      test: ["CMD", "curl", "service-consumer:8083/healthz"]
       retries: 10
       interval: 5s
     networks:
@@ -51,6 +53,8 @@ services:
     depends_on:
       - kafka
       - jaeger
+      - prometheus
+      - postgres
     env_file:
       - dev.env
     environment:
@@ -89,9 +93,16 @@ services:
     networks:
       - api
 
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    env_file:
+      - dev.env
+    networks:
+      - api
+
   prometheus:
-    depends_on:
-      - service
     image: prom/prometheus:v2.40.4
     ports:
       - "9090:9090"
@@ -109,7 +120,8 @@ services:
       - "4318:4318" # accept OpenTelemetry Protocol (OTLP) over HTTP
     healthcheck:
       test: ["CMD", "curl", "jaeger:14269/"]
-      timeout: 10s
+      interval: 5s
+      timeout: 5s
       retries: 5
     networks:
       - api

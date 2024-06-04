@@ -6,7 +6,7 @@ import (
 )
 
 func NewPubSubLogger() *PubSubLogger {
-	return &PubSubLogger{l: logger}
+	return &PubSubLogger{l: log}
 }
 
 type PubSubLogger struct {

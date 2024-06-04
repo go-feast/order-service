@@ -16,27 +16,32 @@ func (f CloseFunc) Close() error {
 	return nil
 }
 
+type C struct {
+	Closer io.Closer
+	Name   string
+}
+
 type Closer struct {
 	logger   *zerolog.Logger
-	forClose []io.Closer
+	forClose []C
 }
 
 func (c *Closer) Close() {
 	for _, closer := range c.forClose {
-		err := closer.Close()
+		err := closer.Closer.Close()
 		if err != nil {
-			c.logger.Err(err).Msg("failed to close:")
+			c.logger.Err(err).Msgf("failed to close %s: %s", closer.Name, err)
 		}
 	}
 
 	c.logger.Info().Msg("all dependencies are closed")
 }
 
-func NewCloser(l *zerolog.Logger, forClose ...io.Closer) *Closer {
+func NewCloser(l *zerolog.Logger, forClose ...C) *Closer {
 	return &Closer{logger: l, forClose: forClose}
 }
 
-func (c *Closer) AppendClosers(forClose ...io.Closer) {
+func (c *Closer) AppendClosers(forClose ...C) {
 	c.forClose = append(c.forClose, forClose...)
 }
 

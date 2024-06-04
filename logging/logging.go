@@ -14,7 +14,7 @@ import (
 
 type OptionFunc func(zerolog.Context) zerolog.Context
 
-// NewDefaultLogger returns a global logger, which can be set once via New function.
+// NewDefaultLogger returns a global log, which can be set once via New function.
 // If New wasn't called at least once, zerolog.Nop will be returned
 func NewDefaultLogger(w io.Writer) *zerolog.Logger {
 	l := zerolog.New(w)
@@ -26,12 +26,12 @@ func NewNopLogger() *zerolog.Logger {
 	return &l
 }
 
-var logger *zerolog.Logger
+var log *zerolog.Logger
 
-// New initializes the logger. Sets the global logger once.
+// New initializes the log. Sets the global log once.
 func New(opts ...OptionFunc) *zerolog.Logger {
-	if logger != nil {
-		return logger
+	if log != nil {
+		return log
 	}
 
 	var (
@@ -48,15 +48,15 @@ func New(opts ...OptionFunc) *zerolog.Logger {
 		return NewNopLogger()
 	}
 
-	log := ctx.Logger()
+	logger := ctx.Logger()
 
 	for _, opt := range opts {
-		log.UpdateContext(opt)
+		logger.UpdateContext(opt)
 	}
 
-	logger = &log
+	log = &logger
 
-	return logger
+	return log
 }
 
 func WithTimestamp() OptionFunc {
@@ -102,6 +102,6 @@ func (l *logEntry) Panic(v interface{}, _ []byte) {
 
 func NewLogEntry() middleware.LogFormatter {
 	return &logEntry{
-		l: logger,
+		l: log,
 	}
 }

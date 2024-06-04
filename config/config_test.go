@@ -9,7 +9,11 @@ import (
 )
 
 func TestParseEnvironment_with_prefix(t *testing.T) {
-	t.Setenv("SERVER_DB_URL", "localhost:8080")
+	t.Setenv("SERVER_DB_HOST", "localhost:8080")
+	t.Setenv("SERVER_DB_USER", "user")
+	t.Setenv("SERVER_DB_PASSWORD", "passs")
+	t.Setenv("SERVER_DB_DB", "db")
+	t.Setenv("SERVER_DB_SSL", "disable")
 	t.Run("assert with prefix", func(t *testing.T) {
 		c := &struct {
 			config.DBConfig `env:",prefix=SERVER_DB_"`

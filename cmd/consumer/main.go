@@ -33,6 +33,7 @@ import (
 const (
 	version     = "v1.0"
 	serviceName = "order_consumer"
+	driverName  = "pgx/v5"
 )
 
 func main() {
@@ -122,9 +123,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
 	}
 
-	driverName := "pgx/v5"
-
-	db, err := sqlx.Open(driverName, c.DB.DSN())
+	db, err := sqlx.Connect(driverName, c.DB.DSN())
 	if err != nil {
 		logger.Fatal().Err(err).
 			Str("dsn", c.DB.DSN()).

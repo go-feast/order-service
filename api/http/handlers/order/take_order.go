@@ -57,6 +57,13 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	span.AddEvent("created order")
 
+	// maybe create some service for batch inserting and batch publishing
+	err = h.repository.Create(ctx, o)
+	if err != nil {
+		httpstatus.InternalServerError(ctx, w, err)
+		return
+	}
+
 	JSONOrder := o.ToEvent().ToJSON()
 
 	bytes, err := h.marshaler.Marshal(JSONOrder)

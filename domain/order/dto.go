@@ -1,7 +1,6 @@
 package order
 
 import (
-	"database/sql"
 	"github.com/google/uuid"
 	"service/domain/shared/destination"
 	"time"
@@ -17,8 +16,6 @@ type DatabaseOrderDTO struct { //nolint:govet
 	TransactionID uuid.NullUUID
 	Destination   destination.Destination
 	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	DeletedAt     sql.NullTime
 }
 
 func (d *DatabaseOrderDTO) ToOrder() *Order {

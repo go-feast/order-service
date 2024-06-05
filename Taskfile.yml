@@ -60,7 +60,7 @@ tasks:
   local-up:
     desc: Docker compose up prometheus with our app
     cmds:
-      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
+      - docker-compose --env-file dev.env -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
 
   local-down:
     desc: Docker compose down prometheus with our app

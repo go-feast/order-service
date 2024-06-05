@@ -7,7 +7,10 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
@@ -20,6 +23,7 @@ import (
 	"service/config"
 	"service/event"
 	mw "service/http/middleware"
+	"service/infrastructure/repositories/order/postgres"
 	"service/logging"
 	"service/metrics"
 	"service/pubsub"
@@ -30,6 +34,7 @@ import (
 const (
 	version     = "v1.0"
 	serviceName = "order"
+	driverName  = "pgx/v5"
 )
 
 func main() {
@@ -89,6 +94,14 @@ func main() {
 
 	metrics.RegisterServiceName(serviceName)
 
+	db, err := sqlx.Connect(driverName, c.DB.DSN())
+	if err != nil {
+		logger.Fatal().Err(err).
+			Str("dsn", c.DB.DSN()).
+			Str("driver", driverName).
+			Msg("failed to connect to database")
+	}
+
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
 
@@ -97,7 +110,7 @@ func main() {
 
 	// register routes
 	//		main
-	fc := RegisterMainServiceRoutes(mainRouter, publisher)
+	fc := RegisterMainServiceRoutes(ctx, logger, mainRouter, publisher, db)
 
 	forClose.AppendClosers(fc...)
 	//		metric
@@ -119,15 +132,18 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []closer.C { //nolint:unparam
+func RegisterMainServiceRoutes(_ context.Context, _ *zerolog.Logger, r chi.Router, pub message.Publisher, db *sqlx.DB) []closer.C { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
+
+	repository := postgres.NewPostgreSQLRepository(db)
 
 	handler := order.NewHandler(
 		otel.GetTracerProvider().Tracer(serviceName),
 		pub,
 		event.JSONMarshaler{},
+		repository,
 	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).

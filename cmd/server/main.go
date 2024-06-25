@@ -149,6 +149,7 @@ func RegisterMainServiceRoutes(_ context.Context, _ *zerolog.Logger, r chi.Route
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
 		Route("/api/v1", func(r chi.Router) {
 			r.Route("/order", func(r chi.Router) {
+				r.Get("/{id}", handler.GetOrder)
 				r.Post("/", handler.TakeOrder)
 			})
 		})

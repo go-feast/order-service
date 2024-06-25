@@ -13,7 +13,19 @@ import (
 )
 
 const (
-	selectState = "select orders.state from orders where id = :id"
+	selectOrder = `SELECT
+    				id,
+					restaurant_id,
+					customer_id,
+					courier_id,
+					meals,
+					state,
+					transaction_id,
+					destination,
+					created_at
+				FROM orders
+				WHERE 
+				    id = $1;`
 	insertOrder = `INSERT INTO orders (
 					id,
 					restaurant_id,
@@ -35,6 +47,19 @@ const (
 					ST_SetSRID(ST_MakePoint($8, $9), 4326),
 					$10
 				);`
+	updateOrder = `
+		UPDATE orders
+		SET
+		    restaurant_id = :restaurant_id,
+		    customer_id = :customer_id,
+		    courier_id = :courier_id,
+		    meals = :meals,
+		    state = :state,
+		    destination = ST_GeomFromText(:destination, 4326),
+		    transaction_id = :transaction_id
+		WHERE
+		    id = :id;
+	`
 )
 
 type PostgreSQLRepository struct { //nolint:revive
@@ -42,6 +67,10 @@ type PostgreSQLRepository struct { //nolint:revive
 	queryer  sqlx.QueryerContext
 	preparer sqlx.PreparerContext
 	db       *sqlx.DB
+}
+
+func (p PostgreSQLRepository) Create(ctx context.Context, o *order.Order) error {
+	return p.Insert(ctx, o)
 }
 
 func NewPostgreSQLRepository(db *sqlx.DB) *PostgreSQLRepository {
@@ -60,10 +89,17 @@ var (
 
 var (
 	ErrChangesNotApplied = errors.New("changes not applied")
+	ErrFailedOperation   = errors.New("failed operation")
 )
 
-func (p PostgreSQLRepository) executeTx(ctx context.Context, operation func(ctx context.Context, p sqlx.PreparerContext) error) (err error) {
-	txx, err := p.db.BeginTxx(ctx /*opts*/, nil)
+func (p PostgreSQLRepository) executeTx(
+	ctx context.Context,
+	operation func(
+		ctx context.Context,
+		stmt *sqlx.Tx,
+	) error,
+) (err error) {
+	txx, err := p.db.BeginTxx(ctx, &opts /*opts*/)
 	if err != nil {
 		return errors.Wrap(err, "failed to create postgres transaction")
 	}
@@ -88,8 +124,7 @@ func (p PostgreSQLRepository) executeTx(ctx context.Context, operation func(ctx 
 	opCtx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
-	operation(opCtx, txx)
-
+	err = operation(opCtx, txx)
 	if err != nil {
 		return errors.Wrap(err, "failed to perform transaction script")
 	}
@@ -102,81 +137,93 @@ func (p PostgreSQLRepository) executeTx(ctx context.Context, operation func(ctx 
 	return nil
 }
 
-func (p PostgreSQLRepository) Insert(ctx context.Context, order *order.Order) error {
-	panic("implement me")
+func (p PostgreSQLRepository) Insert(ctx context.Context, o *order.Order) error {
+	dto := o.ToDto()
+
+	_, err := p.execer.ExecContext(ctx, insertOrder,
+		dto.ID,
+		dto.RestaurantID,
+		dto.CustomerID,
+		dto.CourierID,
+		dto.Meals,
+		dto.State,
+		dto.TransactionID,
+		dto.Destination.Longitude, //for postgis geography longitude is firsy to fill
+		dto.Destination.Latitude,
+		dto.CreatedAt,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute insert script")
+	}
+
+	return nil
 }
 
-func (p PostgreSQLRepository) Create(ctx context.Context, o *order.Order) error {
-	return p.executeTx(ctx, func(ctx context.Context, preparer sqlx.PreparerContext) error {
-		script, err := preparer.PrepareContext(ctx, insertOrder)
+func (p PostgreSQLRepository) Get(ctx context.Context, id uuid.UUID) (o *order.Order, err error) {
+	err = p.executeTx(ctx, func(ctx context.Context, tx *sqlx.Tx) error {
+		stmt, err := tx.PreparexContext(ctx, selectOrder)
 		if err != nil {
-			return errors.Wrap(err, "failed to prepare insert script")
+			return errors.Wrap(err, "failed to prepare statement")
 		}
 
-		dto := o.ToDto()
-
-		result, err := script.ExecContext(ctx,
-			dto.ID,
-			dto.RestaurantID,
-			dto.CustomerID,
-			dto.CourierID,
-			dto.Meals,
-			dto.State,
-			dto.TransactionID,
-			dto.Destination.Longitude(), //for postgis geography longitude is firsy to fill
-			dto.Destination.Latitude(),
-			dto.CreatedAt,
-		)
+		dto := &order.DatabaseOrderDTO{}
+		err = stmt.GetContext(ctx, dto, id)
 		if err != nil {
-			return errors.Wrap(err, "failed to execute insert script")
+			return errors.Wrap(err, "failed to perform select statement")
 		}
 
-		affected, err := result.RowsAffected()
-		if err != nil {
-			return err
+		if dto == nil {
+			return errors.Wrap(ErrFailedOperation, "dto is nil")
 		}
 
-		if affected == 0 {
-			return ErrChangesNotApplied
+		o = dto.ToOrder()
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return o, nil
+}
+
+func (p PostgreSQLRepository) Operate(ctx context.Context, id uuid.UUID, op order.Operation) error {
+	return p.executeTx(ctx, func(ctx context.Context, tx *sqlx.Tx) error {
+		// prepare
+		selectStmt, err := tx.PreparexContext(ctx, selectOrder)
+		if err != nil {
+			return errors.Wrap(err, "failed to prepare select statement")
+		}
+		defer selectStmt.Close()
+
+		// select
+		dto := &order.DatabaseOrderDTO{}
+		err = selectStmt.GetContext(ctx, dto, id)
+		if err != nil {
+			return errors.Wrap(err, "failed to select order")
+		}
+
+		// op
+		o := dto.ToOrder()
+
+		err = op(o)
+		if err != nil {
+			return errors.Wrap(err, "failed to perform operation with order")
+		}
+
+		// prepare
+		updateStmt, err := tx.PrepareNamedContext(ctx, updateOrder)
+		if err != nil {
+			return errors.Wrap(err, "failed to prepare insert statement")
+		}
+		defer updateStmt.Close()
+
+		// update
+		_, err = updateStmt.ExecContext(ctx, o.ToDto())
+		if err != nil {
+			return errors.Wrap(err, "failed to perform update statement")
 		}
 
 		return nil
 	})
-}
-
-func (p PostgreSQLRepository) Get(_ context.Context, _ uuid.UUID) (*order.Order, error) {
-	panic("implement me")
-}
-
-func (p PostgreSQLRepository) Operate(ctx context.Context, id uuid.UUID, op order.Operation) error {
-	return p.executeTx(ctx, func(ctx context.Context, preparer sqlx.PreparerContext) error {
-		o, err := p.WithPreparer(preparer).Get(ctx, id)
-		if err != nil {
-			return errors.Wrap(err, "failed to get order")
-		}
-
-		if err = op(o); err != nil {
-			return errors.Wrap(err, "failed to execute operation")
-		}
-
-		return p.WithPreparer(preparer).Insert(ctx, o)
-	})
-}
-
-func (p PostgreSQLRepository) WithTx(tx *sqlx.Tx) PostgreSQLRepository {
-	return PostgreSQLRepository{
-		execer:   tx,
-		queryer:  p.queryer,
-		preparer: tx,
-		db:       p.db,
-	}
-}
-
-func (p PostgreSQLRepository) WithPreparer(preparer sqlx.PreparerContext) PostgreSQLRepository {
-	return PostgreSQLRepository{
-		execer:   p.execer,
-		queryer:  p.queryer,
-		preparer: preparer,
-		db:       p.db,
-	}
 }

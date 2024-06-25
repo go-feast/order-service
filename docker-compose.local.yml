@@ -108,6 +108,7 @@ services:
       interval: 5s
       retries: 3
       timeout: 5s
+      start_period: 4s
 
   migrate:
     image: 'migrate/migrate'
@@ -121,14 +122,12 @@ services:
       - "-path"
       - "/migrations"
       - "-database"
-      - "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=${POSTGRES_SSL}&timezone=UTC"
+      - "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=${POSTGRES_SSL}"
       - "-verbose"
       - "up"
     depends_on:
       postgres:
         condition: service_healthy
-    links:
-      - postgres
 
   prometheus:
     image: prom/prometheus:v2.40.4

@@ -7,10 +7,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -18,8 +21,10 @@ import (
 	"service/api/http/handlers/order"
 	"service/closer"
 	"service/config"
+	domain "service/domain/order"
 	"service/event"
 	mw "service/http/middleware"
+	repository "service/infrastructure/repositories/order/gorm"
 	"service/logging"
 	"service/metrics"
 	"service/pubsub"
@@ -88,6 +93,19 @@ func main() {
 	}
 
 	metrics.RegisterServiceName(serviceName)
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DriverName:           "pgx",
+		DSN:                  c.DB.DSN(),
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to connect to database")
+		return
+	}
+
+	db = db.WithContext(ctx)
+
+	domain.InitializeOrderScheme(db)
 
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
@@ -97,7 +115,7 @@ func main() {
 
 	// register routes
 	//		main
-	fc := RegisterMainServiceRoutes(mainRouter, publisher)
+	fc := RegisterMainServiceRoutes(mainRouter, publisher, db)
 
 	forClose.AppendClosers(fc...)
 	//		metric
@@ -119,15 +137,22 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(r chi.Router, pub message.Publisher) []closer.C { //nolint:unparam
+func RegisterMainServiceRoutes(
+	r chi.Router,
+	pub message.Publisher,
+	db *gorm.DB,
+) []closer.C { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
+
+	orderRepository := repository.NewOrderRepository(db)
 
 	handler := order.NewHandler(
 		otel.GetTracerProvider().Tracer(serviceName),
 		pub,
 		event.JSONMarshaler{},
+		orderRepository,
 	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).

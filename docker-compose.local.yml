@@ -99,8 +99,15 @@ services:
       - "5432:5432"
     env_file:
       - dev.env
+    #    volumes:
+    #      - 'pgsql:/var/lib/postgresql/data'
     networks:
       - api
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DATABASE}", "-U", "${POSTGRES_USERNAME}" ]
+      interval: 5s
+      retries: 3
+      timeout: 5s
 
   prometheus:
     image: prom/prometheus:v2.40.4

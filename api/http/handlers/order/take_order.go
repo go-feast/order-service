@@ -55,6 +55,12 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = h.repository.Create(ctx, o)
+	if err != nil {
+		httpstatus.InternalServerError(ctx, w, err)
+		return
+	}
+
 	span.AddEvent("created order")
 
 	JSONOrder := o.ToEvent().ToJSON()

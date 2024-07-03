@@ -1,36 +1,59 @@
 package order
 
 import (
-	"database/sql"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	"service/domain/shared/destination"
 	"time"
 )
 
+func InitializeOrderScheme(db *gorm.DB) {
+	err := db.AutoMigrate(&DatabaseOrderDTO{})
+	if err != nil {
+		panic(errors.Wrap(err, "failed to migrate database"))
+	}
+}
+
 type DatabaseOrderDTO struct { //nolint:govet
-	ID            uuid.UUID
-	RestaurantID  uuid.UUID
-	CustomerID    uuid.UUID
-	CourierID     uuid.NullUUID
-	Meals         uuid.UUIDs
-	State         State
-	TransactionID uuid.NullUUID
-	Destination   destination.Destination
+	ID            uuid.UUID   `gorm:"type:uuid;primaryKey"`
+	RestaurantID  uuid.UUID   `gorm:"type:uuid"`
+	CustomerID    uuid.UUID   `gorm:"type:uuid"`
+	CourierID     uuid.UUID   `gorm:"type:uuid"`
+	Meals         []uuid.UUID `gorm:"type:uuid[]"`
+	State         State       `gorm:"type:text"`
+	TransactionID uuid.UUID   `gorm:"type:uuid"`
+	Latitude      float64     `gorm:"type:numeric"`
+	Longitude     float64     `gorm:"type:numeric"`
 	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	DeletedAt     sql.NullTime
 }
 
 func (d *DatabaseOrderDTO) ToOrder() *Order {
+	dst, _ := destination.NewDestination(d.Latitude, d.Longitude)
 	return &Order{
 		id:            d.ID,
 		restaurantID:  d.RestaurantID,
 		customerID:    d.CustomerID,
-		courierID:     d.CourierID.UUID,
+		courierID:     d.CourierID,
 		meals:         d.Meals,
 		state:         d.State,
-		transactionID: d.TransactionID.UUID,
-		destination:   d.Destination,
+		transactionID: d.TransactionID,
+		destination:   dst,
 		createdAt:     d.CreatedAt,
+	}
+}
+
+func (o *Order) ToDatabaseDTO() *DatabaseOrderDTO {
+	return &DatabaseOrderDTO{
+		ID:            o.id,
+		RestaurantID:  o.restaurantID,
+		CustomerID:    o.customerID,
+		CourierID:     o.courierID,
+		Meals:         o.meals,
+		State:         o.state,
+		TransactionID: o.transactionID,
+		Latitude:      o.destination.Latitude(),
+		Longitude:     o.destination.Longitude(),
+		CreatedAt:     o.createdAt,
 	}
 }

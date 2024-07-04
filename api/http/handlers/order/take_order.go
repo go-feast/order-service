@@ -1,10 +1,7 @@
 package order
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/render"
-	"github.com/go-feast/topics"
-	"github.com/google/uuid"
 	"net/http"
 	"service/domain/order"
 	"service/http/httpstatus"
@@ -55,31 +52,13 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.repository.Create(ctx, o)
+	err = h.saver.Save(ctx, o)
 	if err != nil {
 		httpstatus.InternalServerError(ctx, w, err)
 		return
 	}
 
 	span.AddEvent("created order")
-
-	JSONOrder := o.ToEvent().ToJSON()
-
-	bytes, err := h.marshaler.Marshal(JSONOrder)
-	if err != nil {
-		httpstatus.InternalServerError(ctx, w, err)
-		return
-	}
-
-	msg := message.NewMessage(uuid.NewString(), bytes)
-
-	msg.SetContext(ctx)
-
-	err = h.publisher.Publish(topics.OrderCreated.String(), msg)
-	if err != nil {
-		httpstatus.InternalServerError(ctx, w, err)
-		return
-	}
 
 	response := TakeOrderResponse{
 		OrderID:   o.ID().String(),

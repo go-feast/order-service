@@ -5,7 +5,7 @@ import (
 	"service/pubsub"
 )
 
-func (h *Handler) OrderCreated(msg *message.Message) error {
+func (h *Handler) OrderCreated(msg *message.Message) ([]*message.Message, error) {
 	_, span := pubsub.SpanFromMessage(
 		msg,
 		"consumer.order.created",
@@ -16,5 +16,5 @@ func (h *Handler) OrderCreated(msg *message.Message) error {
 
 	h.logger.Info().Str("msg-id", msg.UUID).Msg("Received message from topic OrderCreated")
 
-	return nil
+	return []*message.Message{msg}, nil
 }

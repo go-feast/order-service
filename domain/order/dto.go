@@ -9,33 +9,48 @@ import (
 )
 
 func InitializeOrderScheme(db *gorm.DB) {
-	err := db.AutoMigrate(&DatabaseOrderDTO{})
+	err := db.AutoMigrate(&DatabaseOrderDTO{}, &RestaurantOrderDTO{}, &Meal{})
 	if err != nil {
 		panic(errors.Wrap(err, "failed to migrate database"))
 	}
 }
 
 type DatabaseOrderDTO struct { //nolint:govet
-	ID            uuid.UUID   `gorm:"type:uuid;primaryKey"`
-	RestaurantID  uuid.UUID   `gorm:"type:uuid"`
-	CustomerID    uuid.UUID   `gorm:"type:uuid"`
-	CourierID     uuid.UUID   `gorm:"type:uuid"`
-	Meals         []uuid.UUID `gorm:"type:uuid[]"`
-	State         State       `gorm:"type:text"`
-	TransactionID uuid.UUID   `gorm:"type:uuid"`
-	Latitude      float64     `gorm:"type:numeric"`
-	Longitude     float64     `gorm:"type:numeric"`
+	ID            uuid.UUID          `gorm:"type:uuid;primaryKey"`
+	RestaurantID  uuid.UUID          `gorm:"type:uuid"`
+	Restaurant    RestaurantOrderDTO `gorm:"foreignKey:RestaurantID;references:ID"`
+	CustomerID    uuid.UUID          `gorm:"type:uuid"`
+	CourierID     uuid.UUID          `gorm:"type:uuid"`
+	State         State              `gorm:"type:text"`
+	TransactionID uuid.UUID          `gorm:"type:uuid"`
+	Latitude      float64            `gorm:"type:numeric"`
+	Longitude     float64            `gorm:"type:numeric"`
 	CreatedAt     time.Time
+}
+
+type RestaurantOrderDTO struct {
+	ID    uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Meals []Meal    `gorm:"foreignKey:RestaurantID;references:ID"`
+}
+
+type Meal struct {
+	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
+	RestaurantID uuid.UUID `gorm:"type:uuid"`
 }
 
 func (d *DatabaseOrderDTO) ToOrder() *Order {
 	dst, _ := destination.NewDestination(d.Latitude, d.Longitude)
+	meals := make(uuid.UUIDs, len(d.Restaurant.Meals))
+	for i, meal := range d.Restaurant.Meals {
+		meals[i] = meal.ID
+	}
+
 	return &Order{
 		id:            d.ID,
-		restaurantID:  d.RestaurantID,
+		restaurantID:  d.Restaurant.ID,
 		customerID:    d.CustomerID,
 		courierID:     d.CourierID,
-		meals:         d.Meals,
+		meals:         meals,
 		state:         d.State,
 		transactionID: d.TransactionID,
 		destination:   dst,
@@ -44,12 +59,18 @@ func (d *DatabaseOrderDTO) ToOrder() *Order {
 }
 
 func (o *Order) ToDatabaseDTO() *DatabaseOrderDTO {
+	meals := make([]Meal, len(o.meals))
+	for i, meal := range o.meals {
+		meals[i].ID = meal
+	}
 	return &DatabaseOrderDTO{
-		ID:            o.id,
-		RestaurantID:  o.restaurantID,
+		ID: o.id,
+		Restaurant: RestaurantOrderDTO{
+			ID:    o.restaurantID,
+			Meals: meals,
+		},
 		CustomerID:    o.customerID,
 		CourierID:     o.courierID,
-		Meals:         o.meals,
 		State:         o.state,
 		TransactionID: o.transactionID,
 		Latitude:      o.destination.Latitude(),

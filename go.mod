@@ -24,6 +24,7 @@ require (
 )
 
 require (
+	github.com/ThreeDotsLabs/watermill-sql/v2 v2.0.0 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect

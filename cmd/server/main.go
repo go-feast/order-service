@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -24,6 +22,7 @@ import (
 	domain "service/domain/order"
 	"service/event"
 	mw "service/http/middleware"
+	"service/infrastructure/outbox"
 	repository "service/infrastructure/repositories/order/gorm"
 	"service/logging"
 	"service/metrics"
@@ -59,20 +58,6 @@ func main() {
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
-
-	pubSubLogger := logging.NewPubSubLogger()
-
-	publisher, err := kafka.NewPublisher(
-		kafka.PublisherConfig{
-			Brokers:   c.Kafka.KafkaURL,
-			Marshaler: pubsub.OTELMarshaler{},
-			Tracer:    kafka.NewOTELSaramaTracer(),
-		},
-		pubSubLogger,
-	)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
-	}
 
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
@@ -115,7 +100,7 @@ func main() {
 
 	// register routes
 	//		main
-	fc := RegisterMainServiceRoutes(mainRouter, publisher, db)
+	fc := RegisterMainServiceRoutes(mainRouter, db)
 
 	forClose.AppendClosers(fc...)
 	//		metric
@@ -139,20 +124,28 @@ func Middlewares(r chi.Router) {
 
 func RegisterMainServiceRoutes(
 	r chi.Router,
-	pub message.Publisher,
 	db *gorm.DB,
 ) []closer.C { //nolint:unparam
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
 
+	publisher, err := pubsub.NewSQLPublisher(db, logging.NewWatermillAdapter())
+	if err != nil {
+		panic("Failed to create publisher")
+	}
+
 	orderRepository := repository.NewOrderRepository(db)
+	saver := outbox.NewOutbox(
+		publisher,
+		orderRepository,
+		event.JSONMarshaler{},
+	)
 
 	handler := order.NewHandler(
 		otel.GetTracerProvider().Tracer(serviceName),
-		pub,
-		event.JSONMarshaler{},
 		orderRepository,
+		saver,
 	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
@@ -163,7 +156,7 @@ func RegisterMainServiceRoutes(
 		})
 
 	return []closer.C{
-		{Name: "pub", Closer: pub},
+		{Name: "pub", Closer: publisher},
 	}
 }
 

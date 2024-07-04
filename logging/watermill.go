@@ -5,7 +5,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewPubSubLogger() *PubSubLogger {
+func NewWatermillAdapter() watermill.LoggerAdapter {
 	return &PubSubLogger{l: log}
 }
 

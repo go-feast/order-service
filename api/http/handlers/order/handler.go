@@ -1,18 +1,15 @@
 package order
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opentelemetry.io/otel/trace"
 	"service/domain/order"
-	"service/event"
+	"service/domain/shared/saver"
 )
 
 type Handler struct {
 	tracer trace.Tracer
 
-	publisher message.Publisher
-
-	marshaler event.Marshaler
+	saver saver.Saver[*order.Order]
 
 	// metrics
 
@@ -22,14 +19,12 @@ type Handler struct {
 
 func NewHandler(
 	tracer trace.Tracer,
-	publisher message.Publisher,
-	marshaler event.Marshaler,
 	repository order.Repository,
+	saver saver.Saver[*order.Order],
 ) *Handler {
 	return &Handler{
 		tracer:     tracer,
-		publisher:  publisher,
-		marshaler:  marshaler,
 		repository: repository,
+		saver:      saver,
 	}
 }

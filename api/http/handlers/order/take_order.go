@@ -52,7 +52,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.saver.Save(ctx, o)
+	err = h.saverService.Save(ctx, o)
 	if err != nil {
 		httpstatus.InternalServerError(ctx, w, err)
 		return

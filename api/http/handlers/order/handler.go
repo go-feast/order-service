@@ -9,7 +9,7 @@ import (
 type Handler struct {
 	tracer trace.Tracer
 
-	saver saver.Saver[*order.Order]
+	saverService saver.Saver[*order.Order]
 
 	// metrics
 
@@ -20,11 +20,11 @@ type Handler struct {
 func NewHandler(
 	tracer trace.Tracer,
 	repository order.Repository,
-	saver saver.Saver[*order.Order],
+	saverService saver.Saver[*order.Order],
 ) *Handler {
 	return &Handler{
-		tracer:     tracer,
-		repository: repository,
-		saver:      saver,
+		tracer:       tracer,
+		repository:   repository,
+		saverService: saverService,
 	}
 }

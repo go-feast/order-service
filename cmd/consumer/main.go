@@ -134,7 +134,6 @@ func RegisterMetricRoute(r chi.Router) {
 }
 
 func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaConfig) []closer.C {
-
 	subscriber, err := pubsub.NewSQLSubscriber(db, logging.NewWatermillAdapter())
 	if err != nil {
 		panic(err)

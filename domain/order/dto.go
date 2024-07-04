@@ -28,7 +28,7 @@ type DatabaseOrderDTO struct { //nolint:govet
 	CreatedAt     time.Time
 }
 
-type RestaurantOrderDTO struct {
+type RestaurantOrderDTO struct { //nolint:govet
 	ID    uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Meals []Meal    `gorm:"foreignKey:RestaurantID;references:ID"`
 }
@@ -40,7 +40,9 @@ type Meal struct {
 
 func (d *DatabaseOrderDTO) ToOrder() *Order {
 	dst, _ := destination.NewDestination(d.Latitude, d.Longitude)
+
 	meals := make(uuid.UUIDs, len(d.Restaurant.Meals))
+
 	for i, meal := range d.Restaurant.Meals {
 		meals[i] = meal.ID
 	}
@@ -60,9 +62,11 @@ func (d *DatabaseOrderDTO) ToOrder() *Order {
 
 func (o *Order) ToDatabaseDTO() *DatabaseOrderDTO {
 	meals := make([]Meal, len(o.meals))
+
 	for i, meal := range o.meals {
 		meals[i].ID = meal
 	}
+
 	return &DatabaseOrderDTO{
 		ID: o.id,
 		Restaurant: RestaurantOrderDTO{

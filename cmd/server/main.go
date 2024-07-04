@@ -78,6 +78,7 @@ func main() {
 	}
 
 	metrics.RegisterServiceName(serviceName)
+
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DriverName:           "pgx",
 		DSN:                  c.DB.DSN(),

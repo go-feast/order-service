@@ -19,7 +19,7 @@ func NewOrderRepository(
 }
 
 func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
-	result := r.db.Create(o.ToDatabaseDTO())
+	result := r.db.WithContext(ctx).Create(o.ToDatabaseDTO())
 	if result.Error != nil {
 		return errors.Wrap(result.Error, "order create: failed to create order")
 	}
@@ -29,7 +29,8 @@ func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
 
 func (r *OrderRepository) Get(ctx context.Context, id uuid.UUID) (*order.Order, error) {
 	o := &order.DatabaseOrderDTO{}
-	result := r.db.Find(o, "id = ?", id)
+
+	result := r.db.WithContext(ctx).Find(o, "id = ?", id)
 	if result.Error != nil {
 		return nil, errors.Wrap(result.Error, "gorm repository: order get: failed to find order")
 	}

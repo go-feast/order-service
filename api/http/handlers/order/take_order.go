@@ -38,8 +38,6 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	span.AddEvent("parsed TakeOrderRequest")
-
 	o, err := order.NewOrder(
 		takeOrder.RestaurantID,
 		takeOrder.CustomerID,
@@ -54,6 +52,7 @@ func (h *Handler) TakeOrder(w http.ResponseWriter, r *http.Request) {
 
 	err = h.saverService.Save(ctx, o)
 	if err != nil {
+		// should be bad request or internal server error
 		httpstatus.InternalServerError(ctx, w, err)
 		return
 	}

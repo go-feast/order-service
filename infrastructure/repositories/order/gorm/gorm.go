@@ -12,6 +12,15 @@ type OrderRepository struct {
 	db *gorm.DB
 }
 
+func (r *OrderRepository) Delete(ctx context.Context, o *order.Order) error {
+	result := r.db.WithContext(ctx).Delete(o.ToDatabaseDTO())
+	if result.Error != nil {
+		return errors.Wrap(result.Error, "gorm repository: failed to delete order")
+	}
+
+	return nil
+}
+
 func NewOrderRepository(
 	db *gorm.DB,
 ) *OrderRepository {
@@ -21,7 +30,7 @@ func NewOrderRepository(
 func (r *OrderRepository) Create(ctx context.Context, o *order.Order) error {
 	result := r.db.WithContext(ctx).Create(o.ToDatabaseDTO())
 	if result.Error != nil {
-		return errors.Wrap(result.Error, "order create: failed to create order")
+		return errors.Wrap(result.Error, "gorm repository: failed to create order")
 	}
 
 	return nil

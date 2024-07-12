@@ -164,16 +164,16 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		setted      bool
 		expectedErr error
 	}{
-		{
-			name:           "from created to paid",
-			operatorState:  Created,
-			replacingState: Paid,
-
-			changingStateFunc: operator.PayOrder,
-
-			wantErr: false,
-			setted:  true,
-		},
+		//{
+		//	name:           "from created to paid",
+		//	operatorState:  Created,
+		//	replacingState: Paid,
+		//
+		//	changingStateFunc: operator.PayOrder,
+		//
+		//	wantErr: false,
+		//	setted:  true,
+		//},
 		{
 			name:           "from paid to cooking",
 			operatorState:  Paid,

@@ -1,9 +1,9 @@
 package order
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel/trace"
+	"service/domain/order"
 	"service/event"
 )
 
@@ -11,19 +11,19 @@ type Handler struct {
 	logger      *zerolog.Logger
 	unmarshaler event.Unmarshaler
 	tracer      trace.Tracer
-	publisher   message.Publisher
+	repository  order.Repository
 }
 
 func NewHandler(
 	logger *zerolog.Logger,
 	unmarshaler event.Unmarshaler,
 	tracer trace.Tracer,
-	publisher message.Publisher,
+	repository order.Repository,
 ) *Handler {
 	return &Handler{
 		logger:      logger,
 		unmarshaler: unmarshaler,
 		tracer:      tracer,
-		publisher:   publisher,
+		repository:  repository,
 	}
 }

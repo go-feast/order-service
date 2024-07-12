@@ -31,25 +31,33 @@ func NewOutbox(
 func (ob *Outbox) Save(
 	ctx context.Context,
 	o *order.Order,
-) error {
-	err := ob.repository.Create(ctx, o)
-	if err != nil {
-		return errors.Wrap(err, "outbox: saving: failed to create order")
+) (err error) {
+	var repositoryError, marshallError, publishError error
+
+	defer func() {
+		if marshallError != nil || publishError != nil {
+			err = ob.repository.Delete(ctx, o)
+		}
+	}()
+
+	repositoryError = ob.repository.Create(ctx, o)
+	if repositoryError != nil {
+		return errors.Wrap(repositoryError, "outbox: saving: failed to create order")
 	}
 
-	bytes, err := ob.marshaller.Marshal(
+	bytes, marshallError := ob.marshaller.Marshal(
 		o.ToEvent().ToJSON())
-	if err != nil {
-		return errors.Wrap(err, "outbox: saving: failed to marshal event")
+	if marshallError != nil {
+		return errors.Wrap(marshallError, "outbox: saving: failed to marshal event")
 	}
 
 	msg := message.NewMessage(uuid.NewString(), bytes)
 
 	msg.SetContext(ctx)
 
-	err = ob.publisher.Publish(topics.OrderCreated.String(), msg)
-	if err != nil {
-		return errors.Wrap(err, "outbox: saving: failed to publish event")
+	publishError = ob.publisher.Publish(topics.OrderCreated.String(), msg)
+	if publishError != nil {
+		return errors.Wrap(publishError, "outbox: saving: failed to publish event")
 	}
 
 	return nil

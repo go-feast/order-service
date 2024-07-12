@@ -1,6 +1,9 @@
 package order
 
-import "github.com/pkg/errors"
+import (
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
+)
 
 // StateOperator provides methods to operate with order state.
 // USe StateOperator to operate on order state.
@@ -27,8 +30,15 @@ func (s *StateOperator) CloseOrder() (bool, error) {
 
 // PayOrder set orders`s state to [Paid].
 // If order is closed, it returns an error.
-func (s *StateOperator) PayOrder() (bool, error) {
-	return s.trySetState(Paid)
+func (s *StateOperator) PayOrder(transactionID uuid.UUID) (bool, error) {
+	set, err := s.trySetState(Paid)
+	if err != nil || set == false {
+		return false, err
+	}
+
+	s.o.transactionID = transactionID
+
+	return true, nil
 }
 
 // CookOrder set orders`s state to [Cooking].

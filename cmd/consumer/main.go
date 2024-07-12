@@ -22,6 +22,7 @@ import (
 	"service/config"
 	"service/event"
 	mw "service/http/middleware"
+	repository "service/infrastructure/repositories/order/gorm"
 	"service/logging"
 	"service/metrics"
 	"service/pubsub"
@@ -134,34 +135,49 @@ func RegisterMetricRoute(r chi.Router) {
 }
 
 func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaConfig) []closer.C {
-	subscriber, err := pubsub.NewSQLSubscriber(db, logging.NewWatermillAdapter())
+	subscriberSQL, err := pubsub.NewSQLSubscriber(db, logging.NewWatermillAdapter())
 	if err != nil {
 		panic(err)
 	}
 
-	publisher, err := pubsub.NewKafkaPublisher(c.KafkaURL, logging.NewWatermillAdapter())
+	publisherKafka, err := pubsub.NewKafkaPublisher(c.KafkaURL, logging.NewWatermillAdapter())
 	if err != nil {
 		panic(err)
 	}
+
+	subscriberKafka, err := pubsub.NewKafkaSubscriber(c.KafkaURL, logging.NewWatermillAdapter())
+	if err != nil {
+		panic(err)
+	}
+
+	orderRepository := repository.NewOrderRepository(db)
 
 	handler := order.NewHandler(
 		logging.New(),
 		event.JSONMarshaler{},
 		otel.GetTracerProvider().Tracer(serviceName),
-		publisher,
+		orderRepository,
 	)
 
 	r.AddHandler(
-		"handler.order.paid",
+		"handler.order.created",
 		topics.OrderCreated.String(),
-		subscriber,
+		subscriberSQL,
 		topics.OrderCreated.String(),
-		publisher,
+		publisherKafka,
 		handler.OrderCreated,
 	)
 
+	r.AddNoPublisherHandler(
+		"handler.order.paid",
+		topics.Paid.String(),
+		subscriberKafka,
+		handler.OrderPaid,
+	)
+
 	return []closer.C{
-		{Name: "subscriber", Closer: subscriber},
-		{Name: "publisher", Closer: publisher},
+		{Name: "kafka pub", Closer: publisherKafka},
+		{Name: "sql sub", Closer: subscriberSQL},
+		{Name: "kafka sub", Closer: subscriberKafka},
 	}
 }

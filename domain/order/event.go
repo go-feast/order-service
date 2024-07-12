@@ -1,6 +1,7 @@
 package order
 
 import (
+	"github.com/google/uuid"
 	"service/domain/shared/destination"
 	"service/event"
 )
@@ -37,6 +38,6 @@ type JSONEventOrderCreated struct {
 
 type JSONEventOrderPaid struct {
 	event.Event
-	OrderID       string `json:"order_id"`
-	TransactionID string `json:"transaction_id"`
+	OrderID       uuid.UUID `json:"order_id"`
+	TransactionID uuid.UUID `json:"transaction_id"`
 }

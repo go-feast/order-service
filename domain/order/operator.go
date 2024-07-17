@@ -32,7 +32,7 @@ func (s *StateOperator) CloseOrder() (bool, error) {
 // If order is closed, it returns an error.
 func (s *StateOperator) PayOrder(transactionID uuid.UUID) (bool, error) {
 	set, err := s.trySetState(Paid)
-	if err != nil || set == false {
+	if err != nil || !set {
 		return false, err
 	}
 
@@ -63,9 +63,10 @@ func (s *StateOperator) WaitForCourier() (bool, error) {
 // If order is closed, it returns an error.
 func (s *StateOperator) CourierTookOrder(courierID uuid.UUID) (bool, error) {
 	changed, err := s.trySetState(CourierTook)
-	if err != nil || changed == false {
+	if err != nil || !changed {
 		return false, errors.Wrapf(err, "failed to set courier took order state")
 	}
+
 	s.o.courierID = courierID
 
 	return true, nil

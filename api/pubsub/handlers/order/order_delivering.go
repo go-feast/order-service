@@ -11,6 +11,7 @@ func (h *Handler) OrderDelivering(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
+
 	eventOrderDelivering := &event.JSONDelivering{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderDelivering)
@@ -21,9 +22,9 @@ func (h *Handler) OrderDelivering(msg *message.Message) error {
 	err = h.repository.Operate(ctx, eventOrderDelivering.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		delivering, err := stateOperator.DeliveringOrder()
-		if err != nil || !delivering {
-			return errors.Wrapf(err, "can`t set order`s state to delivering: order: %s", o.ID())
+		delivering, deliveryErr := stateOperator.DeliveringOrder()
+		if deliveryErr != nil || !delivering {
+			return errors.Wrapf(deliveryErr, "can`t set order`s state to delivering: order: %s", o.ID())
 		}
 
 		return nil

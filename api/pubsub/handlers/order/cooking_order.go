@@ -11,6 +11,7 @@ func (h *Handler) CookingOrder(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
+
 	eventOrderCooking := &event.JSONOrderCooking{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderCooking)
@@ -21,9 +22,9 @@ func (h *Handler) CookingOrder(msg *message.Message) error {
 	err = h.repository.Operate(ctx, eventOrderCooking.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		cooking, err := stateOperator.CookOrder()
-		if err != nil || !cooking {
-			return errors.Wrapf(err, "can`t set order`s state to cooking: order: %s", o.ID())
+		cooking, cookErr := stateOperator.CookOrder()
+		if cookErr != nil || !cooking {
+			return errors.Wrapf(cookErr, "can`t set order`s state to cooking: order: %s", o.ID())
 		}
 
 		return nil

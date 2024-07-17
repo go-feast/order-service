@@ -69,9 +69,9 @@ func (o *Order) Is(state State) bool {
 	return o.state == state
 }
 
-// ToEvent converts Order to EventType.
-func (o *Order) ToEvent() *event.EventType {
-	return &event.EventType{
+// ToEvent converts Order to Type.
+func (o *Order) ToEvent() *event.Type {
+	return &event.Type{
 		OrderID:      o.id.String(),
 		CustomerID:   o.customerID.String(),
 		RestaurantID: o.restaurantID.String(),

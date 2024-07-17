@@ -13,6 +13,7 @@ func (h *Handler) OrderPaid(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
+
 	eventOrderPaid := &event.JSONEventOrderPaid{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderPaid)
@@ -23,9 +24,9 @@ func (h *Handler) OrderPaid(msg *message.Message) error {
 	err = h.repository.Operate(ctx, eventOrderPaid.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		orderPaid, err := stateOperator.PayOrder(eventOrderPaid.OrderID)
-		if err != nil || !orderPaid {
-			return errors.Wrapf(err, "can`t set order`s state to paid: order: %s", o.ID())
+		orderPaid, payErr := stateOperator.PayOrder(eventOrderPaid.OrderID)
+		if payErr != nil || !orderPaid {
+			return errors.Wrapf(payErr, "can`t set order`s state to paid: order: %s", o.ID())
 		}
 
 		return nil
@@ -35,5 +36,4 @@ func (h *Handler) OrderPaid(msg *message.Message) error {
 	}
 
 	return nil
-
 }

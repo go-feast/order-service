@@ -169,6 +169,7 @@ func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaCon
 	)
 
 	registerOrderStateHandlers(r, handler, subscriberKafka)
+
 	return []closer.C{
 		{Name: "kafka pub", Closer: publisherKafka},
 		{Name: "sql sub", Closer: subscriberSQL},
@@ -177,7 +178,6 @@ func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaCon
 }
 
 func registerOrderStateHandlers(r *message.Router, handler *order.Handler, subKafka message.Subscriber) {
-
 	r.AddNoPublisherHandler(
 		"handler.order.paid",
 		topics.Paid.String(),
@@ -240,5 +240,4 @@ func registerOrderStateHandlers(r *message.Router, handler *order.Handler, subKa
 		subKafka,
 		handler.OrderCanceled,
 	)
-
 }

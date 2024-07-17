@@ -11,6 +11,7 @@ func (h *Handler) CookingTaken(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
+
 	eventOrderTaken := &event.JSONCourierTook{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderTaken)
@@ -21,9 +22,9 @@ func (h *Handler) CookingTaken(msg *message.Message) error {
 	err = h.repository.Operate(ctx, eventOrderTaken.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		taken, err := stateOperator.CourierTookOrder(eventOrderTaken.CourierID)
-		if err != nil || !taken {
-			return errors.Wrapf(err, "can`t set order`s state to taken: order: %s", o.ID())
+		taken, takingErr := stateOperator.CourierTookOrder(eventOrderTaken.CourierID)
+		if takingErr != nil || !taken {
+			return errors.Wrapf(takingErr, "can`t set order`s state to taken: order: %s", o.ID())
 		}
 
 		return nil

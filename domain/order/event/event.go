@@ -4,8 +4,8 @@ import (
 	"service/domain/shared/destination"
 )
 
-// EventType provides methods for converting Order for different marshaling strategies.
-type EventType struct {
+// Type provides methods for converting Order for different marshaling strategies.
+type Type struct {
 	OrderID       string
 	CustomerID    string
 	RestaurantID  string
@@ -14,8 +14,8 @@ type EventType struct {
 	Destination   destination.Destination
 }
 
-// JSONEventOrderCreated converts EventType to JSONEventOrderCreated.
-func (t *EventType) JSONEventOrderCreated() JSONEventOrderCreated {
+// JSONEventOrderCreated converts Type to JSONEventOrderCreated.
+func (t *Type) JSONEventOrderCreated() JSONEventOrderCreated {
 	return JSONEventOrderCreated{
 		OrderID:      t.OrderID,
 		CustomerID:   t.CustomerID,

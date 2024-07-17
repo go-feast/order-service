@@ -11,6 +11,7 @@ func (h *Handler) OrderClosed(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
+
 	eventOrderClosed := &event.JSONClosed{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderClosed)
@@ -21,9 +22,9 @@ func (h *Handler) OrderClosed(msg *message.Message) error {
 	err = h.repository.Operate(ctx, eventOrderClosed.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		closed, err := stateOperator.CloseOrder()
-		if err != nil || !closed {
-			return errors.Wrapf(err, "can`t set order`s state to closed: order: %s", o.ID())
+		closed, closeErr := stateOperator.CloseOrder()
+		if closeErr != nil || !closed {
+			return errors.Wrapf(closeErr, "can`t set order`s state to closed: order: %s", o.ID())
 		}
 
 		return nil

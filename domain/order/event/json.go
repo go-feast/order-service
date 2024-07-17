@@ -53,7 +53,7 @@ type JSONDelivered struct {
 	OrderID     uuid.UUID `json:"order_id"`
 }
 
-type JSONCanceled struct {
+type JSONCanceled struct { //nolint:govet
 	event.Event `json:"-"`
 	OrderID     uuid.UUID `json:"order_id"`
 	Reason      string    `json:"reason"`

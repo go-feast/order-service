@@ -7,33 +7,30 @@ import (
 	"service/domain/order/event"
 )
 
-var _ message.NoPublishHandlerFunc = ((*Handler)(nil)).OrderPaid
-
-func (h *Handler) OrderPaid(msg *message.Message) error {
+func (h *Handler) CookingOrder(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
-	eventOrderPaid := &event.JSONEventOrderPaid{}
+	eventOrderPaid := &event.JSONCookingOrder{}
 
 	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderPaid)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse order paid event")
+		return errors.Wrap(err, "failed to parse order cooking event")
 	}
 
 	err = h.repository.Operate(ctx, eventOrderPaid.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		orderPaid, err := stateOperator.PayOrder(eventOrderPaid.OrderID)
+		orderPaid, err := stateOperator.CookOrder()
 		if err != nil || !orderPaid {
-			return errors.Wrapf(err, "can`t set order`s state to paid: order: %s", o.ID())
+			return errors.Wrapf(err, "can`t set order`s state to cooking: order: %s", o.ID())
 		}
 
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to update order paid")
+		return errors.Wrap(err, "failed to update order cooking")
 	}
 
 	return nil
-
 }

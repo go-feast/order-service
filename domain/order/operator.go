@@ -61,8 +61,14 @@ func (s *StateOperator) WaitForCourier() (bool, error) {
 
 // CourierTookOrder set orders`s state to [CourierTook].
 // If order is closed, it returns an error.
-func (s *StateOperator) CourierTookOrder() (bool, error) {
-	return s.trySetState(CourierTook)
+func (s *StateOperator) CourierTookOrder(courierID uuid.UUID) (bool, error) {
+	changed, err := s.trySetState(CourierTook)
+	if err != nil || changed == false {
+		return false, errors.Wrapf(err, "failed to set courier took order state")
+	}
+	s.o.courierID = courierID
+
+	return true, nil
 }
 
 // DeliveringOrder set orders`s state to [Delivering].

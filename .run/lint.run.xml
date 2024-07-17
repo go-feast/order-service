@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="lint" type="TaskRunConfiguration" factoryName="TaskRunConfiguration">
-    <taskfile taskPath="$USER_HOME$/bin/task" filename="$PROJECT_DIR$/Taskfile.yml" task="lint" workingDirectory="" arguments="" pty="false">
+    <taskfile taskPath="/usr/local/bin/task" filename="$PROJECT_DIR$/Taskfile.yml" task="lint" workingDirectory="" arguments="" pty="false">
       <envs />
       <vars />
     </taskfile>

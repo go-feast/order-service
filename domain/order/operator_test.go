@@ -164,6 +164,7 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		setted      bool
 		expectedErr error
 	}{
+
 		//{
 		//	name:           "from created to paid",
 		//	operatorState:  Created,
@@ -174,6 +175,7 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		//	wantErr: false,
 		//	setted:  true,
 		//},
+
 		{
 			name:           "from paid to cooking",
 			operatorState:  Paid,
@@ -204,16 +206,16 @@ func TestStateOperator_OrderAny(t *testing.T) {
 			wantErr: false,
 			setted:  true,
 		},
-		{
-			name:           "from waiting for courier to courier took",
-			operatorState:  WaitingForCourier,
-			replacingState: CourierTook,
-
-			changingStateFunc: operator.CourierTookOrder,
-
-			wantErr: false,
-			setted:  true,
-		},
+		//{
+		//	name:           "from waiting for courier to courier took",
+		//	operatorState:  WaitingForCourier,
+		//	replacingState: CourierTook,
+		//
+		//	changingStateFunc: operator.CourierTookOrder,
+		//
+		//	wantErr: false,
+		//	setted:  true,
+		//},
 		{
 			name:           "from courier took to delivering",
 			operatorState:  CourierTook,

@@ -46,7 +46,7 @@ func (ob *Outbox) Save(
 	}
 
 	bytes, marshallError := ob.marshaller.Marshal(
-		o.ToEvent().ToJSON())
+		o.ToEvent().JSONEventOrderCreated())
 	if marshallError != nil {
 		return errors.Wrap(marshallError, "outbox: saving: failed to marshal event")
 	}

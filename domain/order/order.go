@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
+	"service/domain/order/event"
 	"service/domain/shared/destination"
 	"time"
 )
@@ -69,8 +70,8 @@ func (o *Order) Is(state State) bool {
 }
 
 // ToEvent converts Order to EventType.
-func (o *Order) ToEvent() *EventType {
-	return &EventType{
+func (o *Order) ToEvent() *event.EventType {
+	return &event.EventType{
 		OrderID:      o.id.String(),
 		CustomerID:   o.customerID.String(),
 		RestaurantID: o.restaurantID.String(),

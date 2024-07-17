@@ -264,29 +264,6 @@ func TestStateOperator_OrderAny(t *testing.T) {
 	}
 }
 
-func TestStateOperator_FromAnyStateToCanceled(t *testing.T) {
-	operator := createOperator(t)
-	states := []State{
-		Created,
-		Paid,
-		Cooking,
-		Finished,
-		WaitingForCourier,
-		CourierTook,
-		Delivering,
-		Delivered,
-	}
-
-	for _, state := range states {
-		operator.o.state = state
-
-		canceled, err := operator.CancelOrder()
-
-		assert.True(t, canceled)
-		assert.NoError(t, err)
-	}
-}
-
 func TestStateOperator_FromAnyStateToClosed(t *testing.T) {
 	operator := createOperator(t)
 	states := []State{

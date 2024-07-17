@@ -11,18 +11,18 @@ func (h *Handler) CookingOrder(msg *message.Message) error {
 	var (
 		ctx = msg.Context()
 	)
-	eventOrderPaid := &event.JSONCookingOrder{}
+	eventOrderCooking := &event.JSONOrderCooking{}
 
-	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderPaid)
+	err := h.unmarshaler.Unmarshal(msg.Payload, eventOrderCooking)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse order cooking event")
 	}
 
-	err = h.repository.Operate(ctx, eventOrderPaid.OrderID, func(o *order.Order) error {
+	err = h.repository.Operate(ctx, eventOrderCooking.OrderID, func(o *order.Order) error {
 		stateOperator := order.NewStateOperator(o)
 
-		orderPaid, err := stateOperator.CookOrder()
-		if err != nil || !orderPaid {
+		cooking, err := stateOperator.CookOrder()
+		if err != nil || !cooking {
 			return errors.Wrapf(err, "can`t set order`s state to cooking: order: %s", o.ID())
 		}
 

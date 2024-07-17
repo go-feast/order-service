@@ -16,20 +16,20 @@ type JSONEventOrderCreated struct {
 	Destination  destination.JSONDestination `json:"destination"`
 }
 
+type JSONOrderFinished struct {
+	event.Event `json:"-"`
+	OrderID     uuid.UUID `json:"order_id"`
+}
+
+type JSONOrderCooking struct {
+	event.Event `json:"-"`
+	OrderID     uuid.UUID `json:"order_id"`
+}
+
 type JSONEventOrderPaid struct {
 	event.Event   `json:"-"`
 	OrderID       uuid.UUID `json:"order_id"`
 	TransactionID uuid.UUID `json:"transaction_id"`
-}
-
-type JSONCookingOrder struct {
-	event.Event `json:"-"`
-	OrderID     uuid.UUID `json:"order_id"`
-}
-
-type JSONOrderFinished struct {
-	event.Event `json:"-"`
-	OrderID     uuid.UUID `json:"order_id"`
 }
 
 type JSONWaitingForCourier struct {
@@ -53,7 +53,7 @@ type JSONDelivered struct {
 	OrderID     uuid.UUID `json:"order_id"`
 }
 
-type JSONCancelled struct {
+type JSONCanceled struct {
 	event.Event `json:"-"`
 	OrderID     uuid.UUID `json:"order_id"`
 	Reason      string    `json:"reason"`

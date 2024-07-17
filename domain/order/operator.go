@@ -18,7 +18,7 @@ func NewStateOperator(o *Order) *StateOperator {
 
 // CancelOrder set orders`s state to [Canceled].
 // If order is closed, it returns an error.
-func (s *StateOperator) CancelOrder() (bool, error) {
+func (s *StateOperator) CancelOrder(_ string) (bool, error) {
 	return s.trySetState(Canceled)
 }
 

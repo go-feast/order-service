@@ -168,16 +168,77 @@ func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaCon
 		handler.OrderCreated,
 	)
 
-	r.AddNoPublisherHandler(
-		"handler.order.paid",
-		topics.Paid.String(),
-		subscriberKafka,
-		handler.OrderPaid,
-	)
-
+	registerOrderStateHandlers(r, handler, subscriberKafka)
 	return []closer.C{
 		{Name: "kafka pub", Closer: publisherKafka},
 		{Name: "sql sub", Closer: subscriberSQL},
 		{Name: "kafka sub", Closer: subscriberKafka},
 	}
+}
+
+func registerOrderStateHandlers(r *message.Router, handler *order.Handler, subKafka message.Subscriber) {
+
+	r.AddNoPublisherHandler(
+		"handler.order.paid",
+		topics.Paid.String(),
+		subKafka,
+		handler.OrderPaid,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.cooking",
+		topics.Cooking.String(),
+		subKafka,
+		handler.CookingOrder,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.cooking.finished",
+		topics.CookingFinished.String(),
+		subKafka,
+		handler.FinishedCooking,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.waiting",
+		topics.WaitingForCourier.String(),
+		subKafka,
+		handler.OrderWaitingForCourier,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.taken",
+		topics.CourierTook.String(),
+		subKafka,
+		handler.CookingTaken,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.delivering",
+		topics.Delivering.String(),
+		subKafka,
+		handler.OrderDelivering,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.delivered",
+		topics.Delivered.String(),
+		subKafka,
+		handler.OrderDelivered,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.closed",
+		topics.Closed.String(),
+		subKafka,
+		handler.OrderClosed,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.canceled",
+		topics.Canceled.String(),
+		subKafka,
+		handler.OrderCanceled,
+	)
+
 }

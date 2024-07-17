@@ -33,6 +33,7 @@ import (
 const (
 	version     = "v1.0"
 	serviceName = "order_consumer"
+	driverName  = "pgx/v5"
 )
 
 func main() {
@@ -98,6 +99,7 @@ func main() {
 			DriverName: driverName,
 			DSN:        c.DB.DSN(),
 		}), &gorm.Config{})
+
 	if err != nil {
 		logger.Fatal().Err(err).
 			Str("dsn", c.DB.DSN()).

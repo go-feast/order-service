@@ -11,6 +11,8 @@ type Handler struct {
 
 	saverService saver.Saver[*order.Order]
 
+	repository order.Repository
+
 	// metrics
 
 	// repositories eg.

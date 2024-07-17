@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
@@ -34,6 +35,7 @@ import (
 const (
 	version     = "v1.0"
 	serviceName = "order"
+	driverName  = "pgx/v5"
 )
 
 func main() {
@@ -92,7 +94,7 @@ func main() {
 	db = db.WithContext(ctx)
 
 	domain.InitializeOrderScheme(db)
-
+  
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
 
@@ -127,6 +129,7 @@ func RegisterMainServiceRoutes(
 	r chi.Router,
 	db *gorm.DB,
 ) []closer.C { //nolint:unparam
+
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)

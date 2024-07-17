@@ -94,13 +94,13 @@ services:
       - api
 
   postgres:
-    image: postgis/postgis:15-master
+    image: postgres:15
     ports:
       - "5432:5432"
     env_file:
       - dev.env
-#    volumes:
-#      - 'pgsql:/var/lib/postgresql/data'
+    #    volumes:
+    #      - 'pgsql:/var/lib/postgresql/data'
     networks:
       - api
     healthcheck:
@@ -108,27 +108,6 @@ services:
       interval: 5s
       retries: 3
       timeout: 5s
-
-  migrate:
-    image: 'migrate/migrate'
-    env_file:
-      - dev.env
-    volumes:
-      - "./sql/:/migrations/"
-    networks:
-      - api
-    command:
-      - "-path"
-      - "/migrations"
-      - "-database"
-      - "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=${POSTGRES_SSL}&timezone=UTC"
-      - "-verbose"
-      - "up"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    links:
-      - postgres
 
   prometheus:
     image: prom/prometheus:v2.40.4

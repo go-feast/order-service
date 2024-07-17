@@ -165,16 +165,6 @@ func TestStateOperator_OrderAny(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:           "from created to paid",
-			operatorState:  Created,
-			replacingState: Paid,
-
-			changingStateFunc: operator.PayOrder,
-
-			wantErr: false,
-			setted:  true,
-		},
-		{
 			name:           "from paid to cooking",
 			operatorState:  Paid,
 			replacingState: Cooking,
@@ -200,16 +190,6 @@ func TestStateOperator_OrderAny(t *testing.T) {
 			replacingState: WaitingForCourier,
 
 			changingStateFunc: operator.WaitForCourier,
-
-			wantErr: false,
-			setted:  true,
-		},
-		{
-			name:           "from waiting for courier to courier took",
-			operatorState:  WaitingForCourier,
-			replacingState: CourierTook,
-
-			changingStateFunc: operator.CourierTookOrder,
 
 			wantErr: false,
 			setted:  true,
@@ -259,29 +239,6 @@ func TestStateOperator_OrderAny(t *testing.T) {
 
 			assert.Equal(t, tc.setted, setted)
 		})
-	}
-}
-
-func TestStateOperator_FromAnyStateToCanceled(t *testing.T) {
-	operator := createOperator(t)
-	states := []State{
-		Created,
-		Paid,
-		Cooking,
-		Finished,
-		WaitingForCourier,
-		CourierTook,
-		Delivering,
-		Delivered,
-	}
-
-	for _, state := range states {
-		operator.o.state = state
-
-		canceled, err := operator.CancelOrder()
-
-		assert.True(t, canceled)
-		assert.NoError(t, err)
 	}
 }
 

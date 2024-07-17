@@ -1,6 +1,9 @@
 package order
 
-import "github.com/pkg/errors"
+import (
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
+)
 
 // StateOperator provides methods to operate with order state.
 // USe StateOperator to operate on order state.
@@ -15,7 +18,7 @@ func NewStateOperator(o *Order) *StateOperator {
 
 // CancelOrder set orders`s state to [Canceled].
 // If order is closed, it returns an error.
-func (s *StateOperator) CancelOrder() (bool, error) {
+func (s *StateOperator) CancelOrder(_ string) (bool, error) {
 	return s.trySetState(Canceled)
 }
 
@@ -27,8 +30,15 @@ func (s *StateOperator) CloseOrder() (bool, error) {
 
 // PayOrder set orders`s state to [Paid].
 // If order is closed, it returns an error.
-func (s *StateOperator) PayOrder() (bool, error) {
-	return s.trySetState(Paid)
+func (s *StateOperator) PayOrder(transactionID uuid.UUID) (bool, error) {
+	set, err := s.trySetState(Paid)
+	if err != nil || !set {
+		return false, err
+	}
+
+	s.o.transactionID = transactionID
+
+	return true, nil
 }
 
 // CookOrder set orders`s state to [Cooking].
@@ -51,8 +61,15 @@ func (s *StateOperator) WaitForCourier() (bool, error) {
 
 // CourierTookOrder set orders`s state to [CourierTook].
 // If order is closed, it returns an error.
-func (s *StateOperator) CourierTookOrder() (bool, error) {
-	return s.trySetState(CourierTook)
+func (s *StateOperator) CourierTookOrder(courierID uuid.UUID) (bool, error) {
+	changed, err := s.trySetState(CourierTook)
+	if err != nil || !changed {
+		return false, errors.Wrapf(err, "failed to set courier took order state")
+	}
+
+	s.o.courierID = courierID
+
+	return true, nil
 }
 
 // DeliveringOrder set orders`s state to [Delivering].

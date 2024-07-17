@@ -3,17 +3,16 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -21,9 +20,11 @@ import (
 	"service/api/http/handlers/order"
 	"service/closer"
 	"service/config"
+	domain "service/domain/order"
 	"service/event"
 	mw "service/http/middleware"
-	"service/infrastructure/repositories/order/postgres"
+	"service/infrastructure/outbox"
+	repository "service/infrastructure/repositories/order/gorm"
 	"service/logging"
 	"service/metrics"
 	"service/pubsub"
@@ -60,20 +61,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer stop()
 
-	pubSubLogger := logging.NewPubSubLogger()
-
-	publisher, err := kafka.NewPublisher(
-		kafka.PublisherConfig{
-			Brokers:   c.Kafka.KafkaURL,
-			Marshaler: pubsub.OTELMarshaler{},
-			Tracer:    kafka.NewOTELSaramaTracer(),
-		},
-		pubSubLogger,
-	)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
-	}
-
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceName(serviceName),
@@ -94,14 +81,20 @@ func main() {
 
 	metrics.RegisterServiceName(serviceName)
 
-	db, err := sqlx.Connect(driverName, c.DB.DSN())
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DriverName:           "pgx",
+		DSN:                  c.DB.DSN(),
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
 	if err != nil {
-		logger.Fatal().Err(err).
-			Str("dsn", c.DB.DSN()).
-			Str("driver", driverName).
-			Msg("failed to connect to database")
+		logger.Fatal().Err(err).Msg("failed to connect to database")
+		return
 	}
 
+	db = db.WithContext(ctx)
+
+	domain.InitializeOrderScheme(db)
+  
 	// main server
 	mainServiceServer, mainRouter := serv.NewServer(c.Server)
 
@@ -110,7 +103,7 @@ func main() {
 
 	// register routes
 	//		main
-	fc := RegisterMainServiceRoutes(ctx, logger, mainRouter, publisher, db)
+	fc := RegisterMainServiceRoutes(mainRouter, db)
 
 	forClose.AppendClosers(fc...)
 	//		metric
@@ -132,18 +125,31 @@ func Middlewares(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func RegisterMainServiceRoutes(_ context.Context, _ *zerolog.Logger, r chi.Router, pub message.Publisher, db *sqlx.DB) []closer.C { //nolint:unparam
+func RegisterMainServiceRoutes(
+	r chi.Router,
+	db *gorm.DB,
+) []closer.C { //nolint:unparam
+
 	// middlewares
 	Middlewares(r)
 	r.Get("/healthz", mw.Healthz)
 
-	repository := postgres.NewPostgreSQLRepository(db)
+	publisher, err := pubsub.NewSQLPublisher(db, logging.NewWatermillAdapter())
+	if err != nil {
+		panic("Failed to create publisher")
+	}
+
+	orderRepository := repository.NewOrderRepository(db)
+	saver := outbox.NewOutbox(
+		publisher,
+		orderRepository,
+		event.JSONMarshaler{},
+	)
 
 	handler := order.NewHandler(
 		otel.GetTracerProvider().Tracer(serviceName),
-		pub,
-		event.JSONMarshaler{},
-		repository,
+		orderRepository,
+		saver,
 	)
 
 	r.With(mw.ResolveTraceIDInHTTP(serviceName)).
@@ -154,7 +160,7 @@ func RegisterMainServiceRoutes(_ context.Context, _ *zerolog.Logger, r chi.Route
 		})
 
 	return []closer.C{
-		{Name: "pub", Closer: pub},
+		{Name: "pub", Closer: publisher},
 	}
 }
 

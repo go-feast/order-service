@@ -3,17 +3,16 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/Shopify/sarama"
-	"github.com/ThreeDotsLabs/watermill-kafka/v2/pkg/kafka"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-feast/topics"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"service/config"
 	"service/event"
 	mw "service/http/middleware"
+	repository "service/infrastructure/repositories/order/gorm"
 	"service/logging"
 	"service/metrics"
 	"service/pubsub"
@@ -38,9 +38,6 @@ const (
 
 func main() {
 	c := &config.ConsumerConfig{}
-
-	saramaSubscriberConfig := kafka.DefaultSaramaSubscriberConfig()
-	saramaSubscriberConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	err := config.ParseConfig(c)
 	if err != nil {
@@ -86,7 +83,7 @@ func main() {
 
 	RegisterMetricRoute(metricRouter)
 
-	pubSubLogger := logging.NewPubSubLogger()
+	pubSubLogger := logging.NewWatermillAdapter()
 	// consumer router
 	router, err := message.NewRouter(message.RouterConfig{}, pubSubLogger)
 	if err != nil {
@@ -95,35 +92,14 @@ func main() {
 
 	Closer.AppendClosers(closer.C{Name: "router", Closer: router})
 
-	saramaTracer := kafka.NewOTELSaramaTracer()
+	driverName := "pgx/v5"
 
-	subscriber, err := kafka.NewSubscriber(
-		kafka.SubscriberConfig{
-			Brokers:               c.Kafka.KafkaURL,
-			Unmarshaler:           kafka.DefaultMarshaler{},
-			OverwriteSaramaConfig: saramaSubscriberConfig,
-			ConsumerGroup:         "test_consumer_group",
-			Tracer:                saramaTracer,
-		},
-		pubSubLogger,
-	)
-	if err != nil {
-		logger.Panic().Err(err).Msg("failed to create kafka subscriber")
-	}
+	db, err := gorm.Open(postgres.New(
+		postgres.Config{
+			DriverName: driverName,
+			DSN:        c.DB.DSN(),
+		}), &gorm.Config{})
 
-	publisher, err := kafka.NewPublisher(
-		kafka.PublisherConfig{
-			Brokers:   c.Kafka.KafkaURL,
-			Marshaler: pubsub.OTELMarshaler{},
-			Tracer:    saramaTracer,
-		},
-		pubSubLogger,
-	)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to create kafka publisher")
-	}
-
-	db, err := sqlx.Connect(driverName, c.DB.DSN())
 	if err != nil {
 		logger.Fatal().Err(err).
 			Str("dsn", c.DB.DSN()).
@@ -131,14 +107,14 @@ func main() {
 			Msg("failed to connect to database")
 	}
 
-	closers := RegisterConsumerHandlers(router, subscriber, publisher, db)
+	closers := RegisterConsumerHandlers(router, db, c.Kafka)
 
 	Closer.AppendClosers(closers...)
 
 	go func() {
 		e := router.Run(ctx)
 		if e != nil {
-			logger.Error().Err(err).Msg("failed to run consumer")
+			logger.Error().Err(err).Msgf("failed to run consumer: %s", e.Error())
 			return
 		}
 
@@ -160,23 +136,110 @@ func RegisterMetricRoute(r chi.Router) {
 	r.Get("/healthz", mw.Healthz)
 }
 
-func RegisterConsumerHandlers(r *message.Router, subscriber message.Subscriber, publisher message.Publisher, db *sqlx.DB) []closer.C {
+func RegisterConsumerHandlers(r *message.Router, db *gorm.DB, c *config.KafkaConfig) []closer.C {
+	subscriberSQL, err := pubsub.NewSQLSubscriber(db, logging.NewWatermillAdapter())
+	if err != nil {
+		panic(err)
+	}
+
+	publisherKafka, err := pubsub.NewKafkaPublisher(c.KafkaURL, logging.NewWatermillAdapter())
+	if err != nil {
+		panic(err)
+	}
+
+	subscriberKafka, err := pubsub.NewKafkaSubscriber(c.KafkaURL, logging.NewWatermillAdapter())
+	if err != nil {
+		panic(err)
+	}
+
+	orderRepository := repository.NewOrderRepository(db)
+
 	handler := order.NewHandler(
 		logging.New(),
 		event.JSONMarshaler{},
 		otel.GetTracerProvider().Tracer(serviceName),
+		orderRepository,
 	)
 
-	r.AddNoPublisherHandler(
-		"handler.order.paid",
+	r.AddHandler(
+		"handler.order.created",
 		topics.OrderCreated.String(),
-		subscriber,
+		subscriberSQL,
+		topics.OrderCreated.String(),
+		publisherKafka,
 		handler.OrderCreated,
 	)
 
+	registerOrderStateHandlers(r, handler, subscriberKafka)
+
 	return []closer.C{
-		{Name: "subscriber", Closer: subscriber},
-		{Name: "publisher", Closer: publisher},
-		{Name: "database connection", Closer: db},
+		{Name: "kafka pub", Closer: publisherKafka},
+		{Name: "sql sub", Closer: subscriberSQL},
+		{Name: "kafka sub", Closer: subscriberKafka},
 	}
+}
+
+func registerOrderStateHandlers(r *message.Router, handler *order.Handler, subKafka message.Subscriber) {
+	r.AddNoPublisherHandler(
+		"handler.order.paid",
+		topics.Paid.String(),
+		subKafka,
+		handler.OrderPaid,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.cooking",
+		topics.Cooking.String(),
+		subKafka,
+		handler.CookingOrder,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.cooking.finished",
+		topics.CookingFinished.String(),
+		subKafka,
+		handler.FinishedCooking,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.waiting",
+		topics.WaitingForCourier.String(),
+		subKafka,
+		handler.OrderWaitingForCourier,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.taken",
+		topics.CourierTook.String(),
+		subKafka,
+		handler.CookingTaken,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.delivering",
+		topics.Delivering.String(),
+		subKafka,
+		handler.OrderDelivering,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.delivered",
+		topics.Delivered.String(),
+		subKafka,
+		handler.OrderDelivered,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.closed",
+		topics.Closed.String(),
+		subKafka,
+		handler.OrderClosed,
+	)
+
+	r.AddNoPublisherHandler(
+		"order.canceled",
+		topics.Canceled.String(),
+		subKafka,
+		handler.OrderCanceled,
+	)
 }

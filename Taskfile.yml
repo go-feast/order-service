@@ -54,28 +54,29 @@ tasks:
   local-build:
     desc: Docker compose up prometheus with our app
     cmds:
-      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics build
-      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
+      - docker compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics build
+      - task local-up
 
   local-up:
     desc: Docker compose up prometheus with our app
     cmds:
-      - docker-compose --env-file dev.env -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
+      - docker compose --env-file dev.env -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics up
+
 
   local-down:
     desc: Docker compose down prometheus with our app
     cmds:
-      - docker-compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics down
+      - docker compose -f {{.LOCAL_DOCKER_COMPOSE}} -p metrics down
 
   set-up-integration-testing:
     desc: Set-up of Kafka, Redis, Postgres and others for integration testing
     cmds:
-      - docker-compose -f {{.INTEGRATION_DOCKER_COMPOSE}} up -d
+      - docker compose -f {{.INTEGRATION_DOCKER_COMPOSE}} up -d
 
   clean-up-after-integration-testing:
     desc: Clean up Kafka, Redis, Postgres and others after integration testing
     cmds:
-      - docker-compose -f {{.INTEGRATION_DOCKER_COMPOSE}} down
+      - docker compose -f {{.INTEGRATION_DOCKER_COMPOSE}} down
   default:
     cmds:
       - task: help

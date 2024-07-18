@@ -48,6 +48,10 @@ type Order struct { //nolint:govet
 	createdAt time.Time
 }
 
+func (o *Order) State() State             { return o.state }
+func (o *Order) TransactionID() uuid.UUID { return o.transactionID }
+func (o *Order) CourierID() uuid.UUID     { return o.courierID }
+
 func (o *Order) ID() uuid.UUID {
 	return o.id
 }
